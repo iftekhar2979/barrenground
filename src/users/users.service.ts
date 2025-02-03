@@ -67,26 +67,32 @@ export class UserService {
     return this.userModel.findByIdAndDelete(id).exec();
   }
   async uploadProfilePicture(user: User, file: FileType): Promise<any> {
-    // const filePath=`${file.destination}/${file.filename}`
 
-    //working With thread to image resize
-    fs.readFile(file.path, async (err, data) => {
-      const resizedBuffer = await resizeImage(data, 800, 600);
-      // Save the resized buffer to a temporary file, then proceed with storage
-      const tempPath = path.join(
-        __dirname,
-        '..',
-        '..',
-        'public',
-        'uploads',
-        file.filename,
-      );
-      fs.writeFileSync(tempPath, resizedBuffer);
-      data = fs.readFileSync(tempPath); // Read the resized image buffer
-      if (err) {
-        throw new Error('Error reading file buffer');
-      }
-    });
+
+// Working with thread to resize image
+fs.readFile(file.path)
+  .then(async (data) => {
+    const resizedBuffer = await resizeImage(data, 800, 600);
+
+    const tempPath = path.join(
+      __dirname,
+      '..',
+      '..',
+      'public',
+      'uploads',
+      file.filename,
+    );
+
+    await fs.writeFile(tempPath, resizedBuffer);  // Use async write
+     await fs.readFile(tempPath);  // Use async read
+
+    // Further processing here...
+  })
+  .catch((err) => {
+    throw new Error('Error reading or writing file buffer: ' + err.message);
+  });
+
+console.timeEnd('Compressing Image');
     await this.updateProfilePicture(
       user.id,
       `${file.destination}/${file.filename}`,

@@ -72,7 +72,6 @@ export class UserController {
     @Roles('user')
     @UseInterceptors(FileInterceptor('file', multerConfig))
     imagesUpload(@Request() req, @UploadedFile() file: Express.Multer.File) {
-    // console.log(file)
       let user = req.user; // Assuming user info is in the request
       return this.userService.uploadProfilePicture(user, file);
     }

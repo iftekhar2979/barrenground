@@ -13,6 +13,9 @@ import { join } from 'path';
 import { ChatController } from './chat/chat.controller';
 import { ChatModule } from './chat/chat.module';
 import { EventsModule } from './events/events.module';
+import { ConversationModule } from './conversation/conversation.module';
+import { MessageModule } from './message/message.module';
+import { GroupParticipantModule } from './group-participant/group-participant.module';
 
 @Module({
   imports:  [
@@ -27,6 +30,9 @@ import { EventsModule } from './events/events.module';
     ProfileModule,
     ChatModule,
     EventsModule,
+    ConversationModule,
+    MessageModule,
+    GroupParticipantModule,
   ],
   controllers: [AppController, ChatController],
   providers: [

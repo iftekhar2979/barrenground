@@ -13,13 +13,13 @@ export const resizeImage = (
   width: number,
   height: number,
 ): Promise<Buffer> => {
+  console.time("RESIZE IMAGE")
   return new Promise((resolve, reject) => {
     // console.log(path);
     const worker = new Worker(path.join(__dirname, 'resizeImageWorker.js'));
     worker.postMessage({ fileBuffer, width, height });
 
     worker.on('message', (result) => {
-      console.log('result', result);
       if (result.error) {
         reject(new Error(result.error));
       } else {
@@ -40,32 +40,16 @@ export const resizeImage = (
         reject(new Error(`Worker stopped with exit code ${code}`));
       }
     });
+    console.timeEnd("RESIZE IMAGE")
   });
 };
 
-// export async function onFileUpload(req: Request, file: any, callback: Function) {
-
-//     try {
-
-//       // Resize the image (you can modify the width and height)
-   
-//     } catch (error) {
-//       callback(error, null);
-//     }
-  
-// }
 // Multer configuration for handling file uploads
 export const multerConfig = {
   storage: diskStorage({
     // Define the destination folder where files will be saved
     destination: 'public/uploads', // You can change this to any other folder you want
-    // Define the naming convention for the uploaded files
     filename: (req, file, callback) => {
-      // Create a unique file name based on the timestamp and random number
-      // Read the file as a buffer
-      // console.log(fil)
-      
-
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
       callback(
         null,
@@ -74,10 +58,10 @@ export const multerConfig = {
     },
   }),
   limits: {
-    // Set file size limit (in bytes). 10 MB here.
-    fileSize: 10 * 1024 * 1024, // 10 MB
+    fileSize: 20 * 1024 * 1024, // 10 MB
   },
   fileFilter: (req, file, callback) => {
+    console.time('fileFilter');
     // Allow only image, audio, and video files
     const allowedMimes = [
       'image/jpeg',
@@ -91,8 +75,8 @@ export const multerConfig = {
     ];
 
     if (allowedMimes.includes(file.mimetype)) {
-      // onFileUpload(req, file, callback);
       callback(null, true);
+      console.timeEnd('fileFilter');
     } else {
       callback(
         new Error(
@@ -100,6 +84,7 @@ export const multerConfig = {
         ),
         false,
       );
+    
     }
   },
 };
