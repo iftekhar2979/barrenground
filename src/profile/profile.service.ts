@@ -1,4 +1,4 @@
-import { LifestyleService } from './../lifestyle/lifestyle.service';
+
 import { ObjectId } from 'mongodb';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -24,7 +24,7 @@ export class ProfileService {
   async registerProfile(profileDto: ProfileDto): Promise<any> {
 
     const newProfile = await this.createProfile(profileDto) as any;
-    console.log("Proifle==========?",newProfile)
+    // console.log("Proifle==========?",newProfile)
    await this.userModel.findByIdAndUpdate(
       profileDto.userID,
       { profileID: newProfile._id },

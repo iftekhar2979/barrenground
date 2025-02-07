@@ -13,9 +13,9 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useGlobalPipes(
     new ValidationPipe({
-      transform: true, // Automatically transform plain objects into DTOs
-      whitelist: true, // Remove properties not in the DTO
-      forbidNonWhitelisted: true, // Throws error if unknown properties are passed
+      transform: true, 
+      whitelist: true, 
+      forbidNonWhitelisted: true, 
     }),
   );
   app.useGlobalFilters(new MongoDuplicateKeyExceptionFilter());

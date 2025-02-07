@@ -26,7 +26,7 @@ import {
   LifeStyleDto,
   InterestAndValuesDto,
 } from './dto/lifeStyleAndValues.dto';
-import { LifestyleService } from 'src/lifestyle/lifestyle.service';
+// import { LifestyleService } from 'src/lifestyle/lifestyle.service';
 import { RolesGuard } from 'src/auth/guard/role-gurad';
 import {
   omitProperties,
