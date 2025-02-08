@@ -1,9 +1,10 @@
 // src/common/multer.config.ts
 import { Worker } from 'worker_threads';
-import { diskStorage } from 'multer';
+import multer, { diskStorage, memoryStorage } from 'multer';
 import { extname } from 'path';
 const path = require('path');
 import { FileType } from 'src/gallery/interface/gallery.interface';
+import { randomBytes } from 'crypto';
 // import fs from 'fs';
 const fs = require('fs');
 
@@ -16,6 +17,7 @@ export const resizeImage = (
   console.time("RESIZE IMAGE")
   return new Promise((resolve, reject) => {
     // console.log(path);
+    console.log("VALS IS JEREJE================================")
     const worker = new Worker(path.join(__dirname, 'resizeImageWorker.js'));
     worker.postMessage({ fileBuffer, width, height });
 
@@ -47,44 +49,85 @@ export const resizeImage = (
 // Multer configuration for handling file uploads
 export const multerConfig = {
   storage: diskStorage({
-    // Define the destination folder where files will be saved
-    destination: 'public/uploads', // You can change this to any other folder you want
+    destination: 'public/uploads',
     filename: (req, file, callback) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      callback(
-        null,
-        file.fieldname + '-' + uniqueSuffix + extname(file.originalname),
-      );
+      console.time("fileName")
+      const uniqueSuffix = randomBytes(8).toString('hex'); // Faster than Date.now()
+      callback(null, `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`);
+      console.timeEnd("fileName")
     },
   }),
   limits: {
-    fileSize: 20 * 1024 * 1024, // 10 MB
+    fileSize: 20 * 1024 * 1024, // 20MB
   },
   fileFilter: (req, file, callback) => {
+    console.log("MULTER")
     console.time('fileFilter');
-    // Allow only image, audio, and video files
     const allowedMimes = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'audio/mpeg',
-      'audio/wav',
-      'video/mp4',
-      'video/webm',
-      'video/ogg',
+      'image/jpeg', 'image/png', 'image/gif',
+      'audio/mpeg', 'audio/wav',
+      'video/mp4', 'video/webm', 'video/ogg'
     ];
 
     if (allowedMimes.includes(file.mimetype)) {
       callback(null, true);
-      console.timeEnd('fileFilter');
     } else {
-      callback(
-        new Error(
-          'Invalid file type. Only image, audio, and video files are allowed',
-        ),
-        false,
-      );
-    
+      callback(new Error('Invalid file type.'), false);
     }
+    console.timeEnd("fileFilter");
   },
+};
+
+export const multerMemoryConfig = {
+  storage: memoryStorage(), // Store file in memory first
+  limits: {
+    fileSize: 20 * 1024 * 1024, // 20MB limit
+  },
+  fileFilter: (req, file, callback) => {
+    console.log("MULTER FILTER")
+    console.time('fileFilter');
+    const allowedMimes = [
+      'image/jpeg', 'image/png', 'image/gif',
+      'audio/mpeg', 'audio/wav',
+      'video/mp4', 'video/webm', 'video/ogg'
+    ];
+
+    if (allowedMimes.includes(file.mimetype)) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+    console.timeEnd("fileFilter");
+  }} // Accepts a single file with the field name 'avatar'
+
+// **Write File to Disk Automatically**
+export const writeFileToDisk = async (file: Express.Multer.File) => {
+  return new Promise<string>((resolve, reject) => {
+    if (!file) {
+      return reject(new Error('No file provided'));
+    }
+
+    console.time("FILE_WRITE");
+
+    // Define the file path
+    const uploadPath = path.join('public/uploads', `${Date.now()}-${file.originalname}`);
+
+    // Create a writable stream
+    const writeStream = fs.createWriteStream(uploadPath);
+
+    // Write buffer data to file
+    writeStream.write(file.buffer);
+    writeStream.end();
+
+    // Wait for file writing to complete
+    writeStream.on('finish', () => {
+      console.timeEnd("FILE_WRITE");
+      resolve(uploadPath.replace('public/', '')); // Return file path
+    });
+
+    writeStream.on('error', (err) => {
+      console.timeEnd("FILE_WRITE");
+      reject(new Error('Error saving file: ' + err.message));
+    });
+  });
 };

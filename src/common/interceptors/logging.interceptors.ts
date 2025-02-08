@@ -3,30 +3,44 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  HttpException,
+  InternalServerErrorException,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    console.time("Request-response time");
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
     const url = request.url;
     const method = request.method;
-    response.on("finish", () => {
-      console.timeEnd("Request-response time");
-    })
-    const bodySize = Buffer.byteLength(JSON.stringify(request.body)); 
+    const now = Date.now();
+    const bodySize = Buffer.byteLength(JSON.stringify(request.body));
 
     return next.handle().pipe(
       tap(() => {
+        const responseTime = Date.now() - now;
         const statusCode = response.statusCode; 
         console.log(
-          `[${method}] ${statusCode} ${url} - Body Size: ${bodySize} bytes - `
+          `[${method}] ${statusCode} ${url} - Body Size: ${bodySize} bytes - ${responseTime}ms `,
         );
-        // console.timeEnd("Request-response time");
+      }),
+      catchError((error) => {
+        console.log("ERRRR",error)
+        const responseTime = Date.now() - now;
+        let statusCode = 500; // Default status code
+
+        if (error instanceof HttpException) {
+          statusCode = error.getStatus();
+        }
+
+        console.error(
+          `[${method}] ${statusCode} ${url} - Body Size: ${bodySize} bytes - ${responseTime}ms - ERROR: ${error.message}`,
+        );
+
+        return throwError(() => error);
       }),
     );
   }

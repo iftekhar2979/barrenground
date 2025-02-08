@@ -28,7 +28,6 @@ import { RolesGuard } from 'src/auth/guard/role-gurad';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from 'src/common/multer/multer.config';
 
-
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -37,7 +36,7 @@ export class UserController {
     return this.userService.create(createUserDto);
   }
 
-  @Get()
+  @Get('/all')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   async findAll(@Query() query: { limit: number; page: number }) {
@@ -53,6 +52,28 @@ export class UserController {
   async findOne(@Param('id') id: string) {
     return this.userService.findOne(id);
   }
+  @Get('')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  async getUsers(
+    @Request() req,
+    @Query('name') name?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    page = Math.max(Number(page), 1);
+    limit = Math.max(Number(limit), 1);
+    if (!req.user) {
+      throw new HttpException('User Not Found!', HttpStatus.NOT_FOUND);
+    }
+
+    return await this.userService.findUsersByName(
+      req.user.id,
+      name,
+      page,
+      limit,
+    );
+  }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -67,12 +88,12 @@ export class UserController {
     return this.userService.delete(id);
   }
 
-   @Post("profile-picture")
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('user')
-    @UseInterceptors(FileInterceptor('file', multerConfig))
-    imagesUpload(@Request() req, @UploadedFile() file: Express.Multer.File) {
-      let user = req.user; // Assuming user info is in the request
-      return this.userService.uploadProfilePicture(user, file);
-    }
+  @Post('profile-picture')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  imagesUpload(@Request() req, @UploadedFile() file: Express.Multer.File) {
+    let user = req.user; // Assuming user info is in the request
+    return this.userService.uploadProfilePicture(user, file);
+  }
 }

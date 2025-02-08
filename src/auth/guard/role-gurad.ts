@@ -29,6 +29,7 @@ export class RolesGuard extends JwtAuthGuard {
     const request = context.switchToHttp().getRequest();
     const user = request.user; // Get the authenticated user from the request
     // Check if the user has one of the required roles
+    console.log(roles)
     const hasRole = roles.some((role) => user.role?.includes(role));
     if (!hasRole) {
       throw new ForbiddenException('You do not have the required role !'); // If the user doesn't have the role, throw ForbiddenException

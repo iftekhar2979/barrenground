@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, ObjectId } from 'mongoose';
 import { User } from './users.schema';
 import { IUser } from './users.interface';
 import { pagination } from 'src/common/pagination/pagination';
@@ -52,9 +52,44 @@ export class UserService {
   }
   // Find a user by ID
   async findOne(id: string): Promise<User> {
-    return this.userModel.findById(id).select('-password').exec();
+    return await this.userModel.findById(id).select('-password').exec();
   }
-
+  async findUsersByName(
+    myId: string,
+    name?: string,
+    page: number = 1,
+    limit: number = 10
+  ) {
+    const filter: { isDeleted: boolean; role: 'user'; name?: any; _id?: any } = {
+      isDeleted: false,
+      role: 'user',
+      _id: { $ne: myId }, // Exclude the current user
+    };
+  
+    if (name) {
+      filter.name = { $regex: new RegExp(name, 'i') };
+    }
+  
+    // Execute both queries concurrently using Promise.all()
+    const [users, totalUsers] = await Promise.all([
+      this.userModel
+        .find(filter)
+        .select('profilePicture name _id')
+        .skip((page - 1) * limit)
+        .sort({createdAt:-1})
+        .limit(limit)
+        .exec(),
+      
+      this.userModel.countDocuments(filter)
+    ]);
+  
+    return {
+      message: `${totalUsers} users found!`,
+      data: users,
+      pagination: pagination(limit, page, Math.ceil(totalUsers / limit)),
+    };
+  }
+  
   // Update a user by ID
   async update(id: string, updateUserDto: IUser): Promise<User> {
     return this.userModel
@@ -67,32 +102,30 @@ export class UserService {
     return this.userModel.findByIdAndDelete(id).exec();
   }
   async uploadProfilePicture(user: User, file: FileType): Promise<any> {
+    // Working with thread to resize image
+    fs.readFile(file.path)
+      .then(async (data) => {
+        const resizedBuffer = await resizeImage(data, 800, 600);
 
+        const tempPath = path.join(
+          __dirname,
+          '..',
+          '..',
+          'public',
+          'uploads',
+          file.filename,
+        );
 
-// Working with thread to resize image
-fs.readFile(file.path)
-  .then(async (data) => {
-    const resizedBuffer = await resizeImage(data, 800, 600);
+        await fs.writeFile(tempPath, resizedBuffer); // Use async write
+        await fs.readFile(tempPath); // Use async read
 
-    const tempPath = path.join(
-      __dirname,
-      '..',
-      '..',
-      'public',
-      'uploads',
-      file.filename,
-    );
+        // Further processing here...
+      })
+      .catch((err) => {
+        throw new Error('Error reading or writing file buffer: ' + err.message);
+      });
 
-    await fs.writeFile(tempPath, resizedBuffer);  // Use async write
-     await fs.readFile(tempPath);  // Use async read
-
-    // Further processing here...
-  })
-  .catch((err) => {
-    throw new Error('Error reading or writing file buffer: ' + err.message);
-  });
-
-console.timeEnd('Compressing Image');
+    console.timeEnd('Compressing Image');
     await this.updateProfilePicture(
       user.id,
       `${file.destination}/${file.filename}`,
