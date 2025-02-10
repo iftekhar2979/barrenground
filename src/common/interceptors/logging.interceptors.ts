@@ -24,7 +24,7 @@ export class LoggingInterceptor implements NestInterceptor {
         const responseTime = Date.now() - now;
         const statusCode = response.statusCode; 
         console.log(
-          `[${method}] ${statusCode} ${url} - Body Size: ${bodySize} bytes - ${responseTime}ms `,
+          `${request.headers["user-agent"]} [${method}] ${statusCode} ${url} - Body Size: ${bodySize} bytes - ${responseTime}ms `,
         );
       }),
       catchError((error) => {
@@ -37,7 +37,7 @@ export class LoggingInterceptor implements NestInterceptor {
         }
 
         console.error(
-          `[${method}] ${statusCode} ${url} - Body Size: ${bodySize} bytes - ${responseTime}ms - ERROR: ${error.message}`,
+          `${request.headers["user-agent"]} [${method}] ${statusCode} ${url} - Body Size: ${bodySize} bytes - ${responseTime}ms - ERROR: ${error.message}`,
         );
 
         return throwError(() => error);

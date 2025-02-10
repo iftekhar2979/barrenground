@@ -20,7 +20,7 @@ import { GroupParticipantModule } from './group-participant/group-participant.mo
 @Module({
   imports:  [
     // Connect to MongoDB
-    MongooseModule.forRoot('mongodb://localhost:27170/qping-lira'),
+    MongooseModule.forRoot('mongodb://localhost:27017/qping-lira'),
     UsersModule,
     AuthModule,
     ServeStaticModule.forRoot({
