@@ -11,7 +11,9 @@ import { Http2ServerRequest } from 'http2';
 import mongoose, { Model, Types, ObjectId } from 'mongoose';
 import { pagination } from 'src/common/pagination/pagination';
 import { pipeline } from 'stream';
-// import { ObjectId } from 'mongoose';
+// import { ObjectId } from 'mongoose'; 
+
+console.log("VALEISE")
 @Injectable()
 export class ConversationService {
   constructor(
@@ -221,7 +223,6 @@ export class ConversationService {
       .lean();
 
     const involvedGroupIds = userGroupIds.map((g) => g.groupId);
-
     // Step 2: Fetch groups, prioritizing the user's groups
     const pipeline :any = [
       {
