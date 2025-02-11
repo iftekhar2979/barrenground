@@ -13,7 +13,7 @@ import { pagination } from 'src/common/pagination/pagination';
 import { pipeline } from 'stream';
 // import { ObjectId } from 'mongoose'; 
 
-console.log("VALEISE")
+console.log("I just changed the values now .")
 @Injectable()
 export class ConversationService {
   constructor(
@@ -55,7 +55,7 @@ export class ConversationService {
     if (group.type === 'private') {
       const member = await this.groupMemberModel.findOne({
         groupId: new Types.ObjectId(groupId), // Ensure groupId is ObjectId
-        userId: new Types.ObjectId(addedBy), // Ensure addedBy is ObjectId
+        userId: new Types.ObjectId(addedBy),
       });
       if (!member)
         throw new ForbiddenException(
