@@ -27,6 +27,7 @@ import { UsersModule } from 'src/users/users.module';
     // UploadService
   ],
   controllers: [ConversationController],
-  providers: [UploadService, ConversationService,],
+  providers: [UploadService, ConversationService],
+  exports:[ConversationService]
 })
 export class ConversationModule {}

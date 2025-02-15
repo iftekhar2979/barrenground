@@ -212,6 +212,12 @@ export class ConversationService {
     });
   }
 
+  updateLastMessage(groupId:ObjectId,messageID:ObjectId):void{
+    this.groupModel.findByIdAndUpdate(
+      groupId,
+      { lastMessage: messageID },
+    );
+  }
   async getAllConversations(userId: string, page: number = 1, limit: number = 10) {
     console.log(page,limit)
     const userObjectId = new Types.ObjectId(userId);

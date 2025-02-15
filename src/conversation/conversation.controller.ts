@@ -63,7 +63,7 @@ export class ConversationController {
 
   @Post('/group/:groupId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('user') // You can add more roles as needed
+  @Roles('user') 
   async addUserToGroup(
     @Request() req,
     @Param('groupId') groupId: string,
