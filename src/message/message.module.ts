@@ -1,26 +1,29 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MessageController } from './message.controller';
 import { MessageService } from './message.service';
 import { ConversationModule } from 'src/conversation/conversation.module';
-import { Mongoose } from 'mongoose';
+// import { Mongoose } from 'mongoose';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Message, MessageSchema } from './message.schema';
 import { UsersModule } from 'src/users/users.module';
 import { JwtModule } from '@nestjs/jwt';
+import { SocketModule } from 'src/socket/socket.module';
 
 @Module({
   imports:[
        JwtModule.register({
-          secret: 'yourSecretKey', // You should move this to a config file or env variables
-          signOptions: { expiresIn: '30d' }, // Token expiration time
+          secret: 'yourSecretKey', 
+          signOptions: { expiresIn: '30d' }, 
         }),
-        UsersModule,
+       UsersModule,
     MongooseModule.forFeature([
       { name: Message.name, schema: MessageSchema },
     ]),
-    ConversationModule
+    ConversationModule,
+    // forwardRef(() => SocketModule), 
   ],
   controllers: [MessageController],
   providers: [MessageService],
+  exports:[MessageService]
 })
 export class MessageModule {}

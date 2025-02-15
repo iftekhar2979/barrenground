@@ -12,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { UploadService } from 'src/common/multer/upload.service';
+// import { UploadService } from 'src/common/multer/upload.service';
 import { ConversationService } from './conversation.service';
 // import { CustomFileInterceptor } from 'src/common/interceptors/custom-file-uploader.interceptors';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
@@ -38,16 +38,18 @@ export class ConversationController {
     @Request() req,
     @Body() body: { name: string; type: string },
   ) {
-    console.log('STARTED');
-    // if (!file) {
-    //   throw new Error('Avatar image is required');
-    // }
+
     if (!req.user) {
       throw new Error('No User Found');
     }
+   let avatarUrl:string=""
+    if(!req.file){
+      
+       avatarUrl = `uploads/group.jpg`;
+    }else{
 
-    console.log('FLE', req.file);
-    const avatarUrl = `uploads/${req.file.filename}`;
+       avatarUrl = `uploads/${req.file.filename}`;
+    }
     // console.timeEnd("STARTED")
     try {
       return this.groupService.createGroup(

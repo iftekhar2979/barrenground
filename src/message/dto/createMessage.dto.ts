@@ -1,4 +1,3 @@
-// create-message.dto.ts
 
 import { IsNotEmpty, IsOptional, IsString, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -16,15 +15,17 @@ export class AttachmentDto {
 export class CreateMessageDto {
   @IsNotEmpty()
   @IsString()
-  groupId: string; // Typically provided as a string, later converted to ObjectId if needed
+  groupId: string;
 
   @IsNotEmpty()
   @IsString()
-  sender: string; // Provided as a string representing the user ID
-
+  sender: string; 
   @IsOptional()
   @IsString()
   content?: string;
+  @IsOptional()
+  @IsString()
+  type?: 'text'|'image'|'video';
 
   @IsOptional()
   @IsArray()

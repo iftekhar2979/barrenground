@@ -52,12 +52,8 @@ export class AuthService {
   async checkUserExistWithPhone(createUserDto: CreateUserDto): Promise<User> {
     return await this.userModel.findOne({ phone: createUserDto.phone });
   }
+  
   async create(createUserDto: CreateUserDto): Promise<any> {
-    console.log("createUserDto===>",createUserDto);
-    
-    // Check if the user already exists
-    // console.time('STARTED');
-    // console.time('userExistCheck===============');
     const existingUser = await this.userModel.findOne({
       $or: [
         { name: createUserDto.name },
@@ -65,10 +61,7 @@ export class AuthService {
         { phone: createUserDto.phone },
       ],
     });
-    // console.timeEnd('userExistCheck');
-    console.log("===========",existingUser);
-    console.log("===========",createUserDto);
-    
+   
     if (existingUser) {
       if (existingUser.name === createUserDto.name) {
         console.log('User with this name already exists!=======');
@@ -97,11 +90,10 @@ export class AuthService {
       expiredAt: currentDate,
     });
     // Send OTP email
-    console.time('Email Service');
     this.emailService
       .sendOtpEmail(newUser.email, otp, newUser.name)
       .then(() => {
-        console.log(`OTP email sent to ${newUser.email}`);
+        console.log(`OTP email sent to ${newUser.email} OTP ${otp}`);
       })
       .catch((error) => {
         console.error('Error sending OTP email:', error);
