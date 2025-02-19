@@ -20,7 +20,6 @@ import { SocketModule } from './socket/socket.module';
 
 @Module({
   imports:  [
-    // Connect to MongoDB
     MongooseModule.forRoot('mongodb://localhost:27017/qping-lira'),
     UsersModule,
     AuthModule,

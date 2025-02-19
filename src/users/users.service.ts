@@ -102,33 +102,36 @@ export class UserService {
     return this.userModel.findByIdAndDelete(id).exec();
   }
   async uploadProfilePicture(user: User, file: FileType): Promise<any> {
+    console.log(file)
     // Working with thread to resize image
-    fs.readFile(file.path)
-      .then(async (data) => {
-        const resizedBuffer = await resizeImage(data, 800, 600);
+    // fs.readFile(file.path)
+    //   .then(async (data) => {
+    //     console.log("Data",data)
+    //     const resizedBuffer = await resizeImage(data, 800, 600);
 
-        const tempPath = path.join(
-          __dirname,
-          '..',
-          '..',
-          'public',
-          'uploads',
-          file.filename,
-        );
+    //     const tempPath = path.join(
+    //       __dirname,
+    //       '..',
+    //       '..',
+    //       'public',
+    //       'uploads',
+    //       file.filename,
+    //     );
 
-        await fs.writeFile(tempPath, resizedBuffer); // Use async write
-        await fs.readFile(tempPath); // Use async read
+    //     await fs.writeFile(tempPath, resizedBuffer); // Use async write
+    //     await fs.readFile(tempPath); // Use async read
 
-        // Further processing here...
-      })
-      .catch((err) => {
-        throw new Error('Error reading or writing file buffer: ' + err.message);
-      });
-
+    //     // Further processing here...
+    //   })
+    //   .catch((err) => {
+    //     throw new Error('Error reading or writing file buffer: ' + err.message);
+    //   });
+    // console.log()
+console.log(`${file.destination.split('/')[1]}/${file.filename}`)
     console.timeEnd('Compressing Image');
     await this.updateProfilePicture(
       user.id,
-      `${file.destination}/${file.filename}`,
+      `${file.destination.split('/')[1]}/${file.filename}`,
     );
     return { message: 'Profile Picture Uploaded Successfully', data: {} };
   }
