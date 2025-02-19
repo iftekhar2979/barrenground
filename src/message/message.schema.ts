@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Message extends Document {
@@ -15,18 +15,16 @@ export class Message extends Document {
   @Prop({
     type: [
       {
-        fileName: String,
-        fileType: String,
         fileUrl: String,
+        type:String
       },
     ],
     default: [],
   })
   attachments: {
-    fileName: string;
-    fileType: string;
+    type:string
     fileUrl: string;
-  }[];
+  }[]
 
   @Prop({ default: false })
   isDeleted: boolean;

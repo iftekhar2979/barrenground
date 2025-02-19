@@ -7,7 +7,7 @@ import {
   GroupMember,
   GroupMemberSchema,
 } from 'src/group-participant/group-participant.schema';
-import { UploadService } from 'src/common/multer/upload.service';
+// import { UploadService } from 'src/common/multer/upload.service';
 // import { CustomFileInterceptor } from 'src/common/interceptors/custom-file-uploader.interceptors';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
@@ -27,6 +27,7 @@ import { UsersModule } from 'src/users/users.module';
     // UploadService
   ],
   controllers: [ConversationController],
-  providers: [UploadService, ConversationService,],
+  providers: [ConversationService],
+  exports:[ConversationService]
 })
 export class ConversationModule {}
