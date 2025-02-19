@@ -36,27 +36,28 @@ export class ConversationController {
   @Roles('user')
   async createGroup(
     @Request() req,
-    @Body() body: { name: string; type: string },
+    @Body() body: { name: string; type: string ,users:string|string[] },
   ) {
-
     if (!req.user) {
       throw new Error('No User Found');
     }
-   let avatarUrl:string=""
-    if(!req.file){
-      
-       avatarUrl = `uploads/group.jpg`;
-    }else{
-
-       avatarUrl = `uploads/${req.file.filename}`;
+    let avatarUrl: string = '';
+    if (!req.file) {
+      avatarUrl = `uploads/group.jpg`;
+    } else {
+      avatarUrl = `uploads/${req.file.filename}`;
     }
-    // console.timeEnd("STARTED")
+    if (typeof body.users === 'string') {
+      body.users = body.users.split(',');
+    }
+    console.log(body.users);
     try {
       return this.groupService.createGroup(
         body.name,
         avatarUrl,
         body.type,
         req.user.id,
+        body.users,
       );
     } catch (error) {
       throw new Error('Error uploading file: ' + error.message);
@@ -65,7 +66,7 @@ export class ConversationController {
 
   @Post('/group/:groupId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('user') 
+  @Roles('user')
   async addUserToGroup(
     @Request() req,
     @Param('groupId') groupId: string,
@@ -110,7 +111,9 @@ export class ConversationController {
     page = Math.max(Number(page), 1);
     limit = Math.max(Number(limit), 1);
     if (!page || !limit) {
-      throw new ForbiddenException('Please set Pagination First with limit and page');
+      throw new ForbiddenException(
+        'Please set Pagination First with limit and page',
+      );
     }
     if (!req.user) {
       throw new ForbiddenException('No user found');
@@ -125,5 +128,38 @@ export class ConversationController {
     } catch (error) {
       throw new Error('Error adding user to group: ' + error.message);
     }
+  }
+  @Post('/group/:groupId/remove/:userId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  async removeUserFromGroup(
+    @Request() req,
+    @Param('groupId') groupId: string,
+    @Param('userId') userId: string,
+  ) {
+    try {
+      if (!req.user) {
+        throw new ForbiddenException('No user found');
+      }
+      const removedBy = req.user.id;
+      return await this.groupService.removeUserFromGroup(
+        groupId,
+        userId,
+        removedBy,
+      );
+    } catch (error) {
+      throw new Error('Error adding user to group: ' + error.message);
+    }
+  }
+
+  @Post('/group/:groupId/promote/:userId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  async promote(
+    @Request() req,
+    @Param('groupId') groupId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.groupService.promoteUserToAdmin(groupId, userId, req.user.id)
   }
 }

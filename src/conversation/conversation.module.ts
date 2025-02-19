@@ -11,23 +11,24 @@ import {
 // import { CustomFileInterceptor } from 'src/common/interceptors/custom-file-uploader.interceptors';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
+import { GroupParticipantModule } from 'src/group-participant/group-participant.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Group.name, schema: GroupSchema },
       { name: GroupMember.name, schema: GroupMemberSchema },
-      // { name: User.name, schema: UserSchema },
     ]),
     JwtModule.register({
       secret: 'yourSecretKey', // You should move this to a config file or env variables
       signOptions: { expiresIn: '30d' }, // Token expiration time
     }),
-    UsersModule
+    UsersModule,
+    GroupParticipantModule,
     // UploadService
   ],
   controllers: [ConversationController],
   providers: [ConversationService],
-  exports:[ConversationService]
+  exports: [ConversationService],
 })
 export class ConversationModule {}

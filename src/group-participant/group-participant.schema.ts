@@ -9,7 +9,7 @@ export class GroupMember extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
   userId: Types.ObjectId; // User in the Group
 
-  @Prop({ enum: ['admin', 'member'], default: 'member' })
+  @Prop({ enum: ['admin', 'member',"moderator"], default: 'member' })
   role: string; // Role of the user in the group
 }
 

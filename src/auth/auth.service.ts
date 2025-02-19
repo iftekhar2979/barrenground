@@ -251,11 +251,10 @@ export class AuthService {
     }
   
     const token = this.jwtService.sign(payload);
-    return { message: 'OTP Verified Successfully', data: {}, token };
+    return { message: 'OTP Verified Successfully', data: {id:user.id}, token };
   }
   async resendOtp(user: Omit<IUser, 'password'>) {
-    // Retrieve the last OTP entry for the user
-    console.log("user",user)
+
     let otpData: otp = await this.otpModel.findOne({ userID: user.id });
     // If OTP data exists, check the time difference
     if (otpData && otpData.updatedAt) {
@@ -263,7 +262,7 @@ export class AuthService {
       // Check if the last OTP was sent less than 30 seconds ago
       if (timeDifference < 30000) {
         throw new BadRequestException(
-          'You can resend the OTP only after 30 seconds.',
+          `You can resend the OTP only after  ${Math.round((30-timeDifference/1000))} seconds.`,
         );
       }
     }
