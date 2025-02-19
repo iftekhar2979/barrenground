@@ -16,6 +16,7 @@ import { EventsModule } from './events/events.module';
 import { ConversationModule } from './conversation/conversation.module';
 import { MessageModule } from './message/message.module';
 import { GroupParticipantModule } from './group-participant/group-participant.module';
+import { SocketModule } from './socket/socket.module';
 
 @Module({
   imports:  [
@@ -33,6 +34,7 @@ import { GroupParticipantModule } from './group-participant/group-participant.mo
     ConversationModule,
     MessageModule,
     GroupParticipantModule,
+    SocketModule,
   ],
   controllers: [AppController, ChatController],
   providers: [

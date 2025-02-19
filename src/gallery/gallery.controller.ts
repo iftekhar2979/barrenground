@@ -24,6 +24,7 @@ import { RolesGuard } from 'src/auth/guard/role-gurad';
 import { Roles } from 'src/common/custom-decorator/role.decorator';
 import mongoose, { ObjectId } from 'mongoose';
 
+console.log("Testing Temporary File Has been added")
 @Controller('gallery')
 export class GalleryController {
   constructor(private readonly galleryService: GalleryService) {}
