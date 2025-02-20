@@ -9,10 +9,10 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Http2ServerRequest } from 'http2';
 import mongoose, { Model, Types, ObjectId } from 'mongoose';
+import { ResponseInterface } from 'src/auth/interface/ResponseInterface';
 import { pagination } from 'src/common/pagination/pagination';
 import { GroupService } from 'src/group-participant/group-participant.service';
 import { pipeline } from 'stream';
-// import { ObjectId } from 'mongoose';
 
 console.log('I just changed the values now .');
 @Injectable()
@@ -98,6 +98,53 @@ export class ConversationService {
       }),
     };
   }
+  async addAllUsersToGroup(
+    groupId: string,
+    userIds: string[],
+    addedBy: string,
+  ) {
+    const group = await this.groupModel.findById(groupId);
+    if (!group) throw new NotFoundException('Group not found');
+    console.log(userIds);
+
+    // Public group: Anyone can join | Private group: Only members can add
+    if (group.type === 'private') {
+      const member = await this.groupMemberModel.findOne({
+        groupId: new Types.ObjectId(groupId), // Ensure groupId is ObjectId
+        userId: new Types.ObjectId(addedBy),
+      });
+      if (!member)
+        throw new ForbiddenException(
+          'Only members can add users to a private group',
+        );
+    }
+
+    // Check and add all users
+    const addedMembers = [];
+    for (const userId of userIds) {
+      const existingMember = await this.groupMemberModel.findOne({
+        groupId: new Types.ObjectId(groupId), // Ensure groupId is ObjectId
+        userId: new Types.ObjectId(userId), // Ensure userId is ObjectId
+      });
+      if (existingMember) {
+        throw new ForbiddenException(`User ${userId} is already in the group`);
+      }
+
+      // Add user to the group if they aren't already a member
+      const newMember = await this.groupMemberModel.create({
+        groupId: new Types.ObjectId(groupId),
+        userId: new Types.ObjectId(userId),
+        role: 'member',
+      });
+
+      addedMembers.push(newMember);
+    }
+
+    return {
+      message: 'Members Added Successfully',
+      data: addedMembers,
+    };
+  }
 
   /** 3️⃣ Promote a user to admin */
   async promoteUserToAdmin(
@@ -131,19 +178,22 @@ export class ConversationService {
     };
   }
   /** 4️⃣ Get all participants of a group */
-  async getGroup(groupId: string) {
+  async getGroup(groupId: string,skip:number,limit:number) {
     return await this.groupMemberModel
       .find({ groupId: new mongoose.Types.ObjectId(groupId) })
+      .skip(skip)
+      .limit(limit)
       .populate('userId', 'name email profilePicture');
   }
 
-  async getGroupParticipants(groupId: string) {
-    const participants = await this.getGroup(groupId);
+  async getGroupParticipants(groupId: string,page:number,limit:number) {
+    let skip= (page-1)*limit;
+    const participants = await this.getGroup(groupId,skip,limit);
+    const count= await this.groupService.count(groupId);
     if (!participants || participants.length === 0) {
       throw new HttpException('No Group Found', 404);
     }
-
-    return participants;
+    return {message:"Participants Retrived Successfully",data:participants,pagination:pagination(limit,page,count)};
   }
 
   /** 5️⃣ Admin removes a user (but not another admin) */
@@ -209,25 +259,35 @@ export class ConversationService {
   }
 
   /** 7️⃣ Join a Public Group */
-  async joinPublicGroup(groupId: string, userId: string) {
+  async joinPublicGroup(
+    groupId: string,
+    userId: string,
+  ): Promise<ResponseInterface<{ groupId: string; userId: string }>> {
+    console.log(userId)
     const group = await this.groupModel.findById(groupId);
     if (!group) throw new NotFoundException('Group not found');
 
-    if (group.type !== 'public')
+    if (group.type !== 'public') {
       throw new ForbiddenException('This is not a public group');
+    }
 
     const existingMember = await this.groupMemberModel.findOne({
       groupId,
       userId,
     });
-    if (existingMember)
+    if (existingMember) {
       throw new ForbiddenException('User is already in the group');
+    }
 
-    return await this.groupMemberModel.create({
+    await this.groupMemberModel.create({
       groupId,
       userId,
       role: 'member',
     });
+    return {
+      message: 'User joined the group successfully',
+      data: { groupId, userId },
+    };
   }
 
   updateLastMessage(groupId: ObjectId, messageID: ObjectId): void {
@@ -237,10 +297,9 @@ export class ConversationService {
     userId: string,
     page: number = 1,
     limit: number = 10,
+    searchTerm?: string,
   ) {
-    console.log(page, limit);
     const userObjectId = new Types.ObjectId(userId);
-
     // Step 1: Find all groups where the user is a member
     const userGroupIds = await this.groupMemberModel
       .find({ userId: userObjectId })
@@ -251,15 +310,20 @@ export class ConversationService {
     // Step 2: Fetch groups, prioritizing the user's groups
     const pipeline: any = [
       {
-        $match: { isActive: true }, // Fetch only active groups
+        $match: { 
+          name: { $regex: new RegExp(searchTerm, 'i') },
+          isActive: true 
+
+        }, // Fetch only active groups
+      
       },
       {
         $addFields: {
           isUserInvolved: {
             $cond: {
               if: { $in: ['$_id', involvedGroupIds] },
-              then: 1,
-              else: 0,
+              then: true,
+              else: false,
             },
           },
         },
@@ -295,6 +359,20 @@ export class ConversationService {
           localField: 'lastMessage',
           foreignField: '_id',
           as: 'lastMessage',
+          pipeline: [
+            {
+              $limit: 1,
+            },
+            {
+              $sort: { createdAt: -1 },
+            },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          lastMessage: { $arrayElemAt: ['$lastMessage', null] },
+          // sendAt: { $arrayElemAt: ['$sendAt', null] },
         },
       },
       {
@@ -303,9 +381,7 @@ export class ConversationService {
           avatar: 1,
           type: 1,
           lastActiveAt: 1,
-          // createdBy:0,
-          // members: { _id: 1, userId: 1, role: 1 }, // Include members
-          lastMessage: { _id: 1, content: 1, sentAt: 1 },
+          lastMessage: 1,
           isUserInvolved: 1,
         },
       },
@@ -313,7 +389,7 @@ export class ConversationService {
 
     const [groups, totalGroups] = await Promise.all([
       this.groupModel.aggregate(pipeline).exec(),
-      this.groupModel.countDocuments({ isActive: true }), // Count total groups
+      this.groupModel.countDocuments({ isActive: true,  name: { $regex: new RegExp(searchTerm, 'i') }, }), // Count total groups
     ]);
 
     return {

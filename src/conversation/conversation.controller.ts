@@ -36,7 +36,7 @@ export class ConversationController {
   @Roles('user')
   async createGroup(
     @Request() req,
-    @Body() body: { name: string; type: string ,users:string|string[] },
+    @Body() body: { name: string; type: string; users: string | string[] },
   ) {
     if (!req.user) {
       throw new Error('No User Found');
@@ -50,7 +50,6 @@ export class ConversationController {
     if (typeof body.users === 'string') {
       body.users = body.users.split(',');
     }
-    console.log(body.users);
     try {
       return this.groupService.createGroup(
         body.name,
@@ -70,14 +69,14 @@ export class ConversationController {
   async addUserToGroup(
     @Request() req,
     @Param('groupId') groupId: string,
-    @Body() body: { userId: string },
+    @Body() body: {userId: string[] },
   ) {
     if (!req.user) {
       throw new ForbiddenException('No user found');
     }
 
     try {
-      return await this.groupService.addUserToGroup(
+      return await this.groupService.addAllUsersToGroup(
         groupId,
         body.userId,
         req.user.id,
@@ -86,16 +85,24 @@ export class ConversationController {
       throw new Error('Error adding user to group: ' + error.message);
     }
   }
+
   @Get('/group/:groupId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user') // You can add more roles as needed
-  async getAllParticipant(@Request() req, @Param('groupId') groupId: string) {
+  async getAllParticipant(@Request() req, @Param('groupId') groupId: string,@Query('page') page: number = 1, @Query('limit') limit: number = 10) {
+    page = Math.max(Number(page), 1);
+    limit = Math.max(Number(limit), 1);
+    if (!page || !limit) {  
+      throw new ForbiddenException(
+        'Please set Pagination First with limit and page',
+      );
+    }
     if (!req.user) {
       throw new ForbiddenException('No user found');
     }
 
     try {
-      return await this.groupService.getGroupParticipants(groupId);
+      return await this.groupService.getGroupParticipants(groupId,page,limit);
     } catch (error) {
       throw new Error('Error adding user to group: ' + error.message);
     }
@@ -107,6 +114,7 @@ export class ConversationController {
     @Request() req,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Query('searchTerm') search: string,
   ) {
     page = Math.max(Number(page), 1);
     limit = Math.max(Number(limit), 1);
@@ -124,6 +132,7 @@ export class ConversationController {
         req.user.id,
         page,
         limit,
+        search
       );
     } catch (error) {
       throw new Error('Error adding user to group: ' + error.message);
@@ -160,6 +169,25 @@ export class ConversationController {
     @Param('groupId') groupId: string,
     @Param('userId') userId: string,
   ) {
-    return this.groupService.promoteUserToAdmin(groupId, userId, req.user.id)
+    return this.groupService.promoteUserToAdmin(groupId, userId, req.user.id);
   }
+
+  @Post('/group/:groupId/join')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  joinGroup(
+    @Request() req,
+    @Param('groupId') groupId: string,
+    // @Param('userId') userId: string,
+  ) {
+    // const 
+    return this.groupService.joinPublicGroup(groupId, req.user.id);
+  }
+  // async promote(
+  //   @Request() req,
+  //   @Param('groupId') groupId: string,
+  //   @Param('userId') userId: string,
+  // ) {
+  //   return this.groupService.promoteUserToAdmin(groupId, userId, req.user.id)
+  // }
 }

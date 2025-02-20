@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, ObjectId, Types } from 'mongoose';
+import mongoose, { Model, mongo, ObjectId, Types } from 'mongoose';
 import {GroupMember } from './group-participant.schema'; // Adjust import paths as needed
+// import { group } from 'console';
 // import { Group } from 'src/conversation/conversation.schema';
 // import { GroupMember } from './'; // Adjust import paths as needed
 
@@ -32,6 +33,13 @@ export class GroupService {
 
   checkIfUserIsAdmin(groupId:ObjectId,userId:ObjectId){
     return this.groupMemberModel.findOne({groupId:groupId,userId:userId,role:"admin"}).exec();
+  }
+  checkMyRole(groupId:string ,userId:string){
+    console.log(userId)
+    return this.groupMemberModel.findOne({groupId:new mongoose.Types.ObjectId(groupId),userId:new mongoose.Types.ObjectId(userId)});
+  }
+  count(groupId:string ):Promise<number>{
+    return this.groupMemberModel.countDocuments({groupId:new mongoose.Types.ObjectId(groupId)});
   }
  
 }
