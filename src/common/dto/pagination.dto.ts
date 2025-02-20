@@ -33,3 +33,9 @@ export class PaginationOptions {
     within?: string;
   }
   
+  export class ConversationOptions extends PaginationOptions {
+    @IsOptional()
+    conversationId?: string;
+    @IsString()
+    type:'pending'|'accepted'
+  }

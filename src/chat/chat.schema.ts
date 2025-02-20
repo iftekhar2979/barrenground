@@ -36,6 +36,21 @@ export class Conversation extends Document {
     required: false,
   })
   deletedBy: mongoose.Schema.Types.ObjectId[];
+  @Prop({
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required:true
+  })
+  requestedBy: mongoose.Schema.Types.ObjectId;
+  @Prop({
+    type:Boolean,
+    default:false
+    // ref: 'User',
+  })
+  isAccepted:boolean;
+
 }
+
+
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);
