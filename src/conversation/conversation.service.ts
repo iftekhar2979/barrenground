@@ -204,15 +204,13 @@ export class ConversationService {
   ) {
     const group = await this.groupModel.findById(groupId);
     if (!group) throw new NotFoundException('Group not found');
-
-    const remover = await this.groupMemberModel.findOne({
-      groupId,
-      userId: removedBy,
-    });
+// console.log(group)
+    const remover = await this.groupService.checkMyRole(groupId, removedBy);
+    console.log(groupId,userId,remover)
     if (!remover || remover.role !== 'admin')
       throw new ForbiddenException('Only admins can remove members');
 
-    const targetUser = await this.groupMemberModel.findOne({ groupId, userId });
+    const targetUser = await this.groupService.checkMyRole(groupId, userId);
     if (!targetUser) throw new NotFoundException('User not found in the group');
 
     if (
@@ -223,8 +221,7 @@ export class ConversationService {
         'Only the group creator can remove an admin',
       );
     }
-
-    await this.groupMemberModel.deleteOne({ groupId, userId });
+await this.groupService.deleteUser(groupId,userId);
 
     // If the user is an admin, remove them from the `admins` array
     if (targetUser.role === 'admin') {
@@ -233,8 +230,7 @@ export class ConversationService {
         { $pull: { admins: userId } },
       );
     }
-
-    return { message: 'User removed from the group' };
+    return { message: 'User removed from the group' ,data:{groupId,userId}};
   }
 
   /** 6️⃣ Only the Super Admin can degrade an admin */

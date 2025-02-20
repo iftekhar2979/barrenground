@@ -41,5 +41,8 @@ export class GroupService {
   count(groupId:string ):Promise<number>{
     return this.groupMemberModel.countDocuments({groupId:new mongoose.Types.ObjectId(groupId)});
   }
+  deleteUser(groupId:string,userId:string){
+    return this.groupMemberModel.deleteOne({groupId:new mongoose.Types.ObjectId(groupId),userId:new mongoose.Types.ObjectId(userId)});
+  }
  
 }

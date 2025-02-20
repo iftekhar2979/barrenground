@@ -146,7 +146,6 @@ export class ConversationController {
     @Param('groupId') groupId: string,
     @Param('userId') userId: string,
   ) {
-    try {
       if (!req.user) {
         throw new ForbiddenException('No user found');
       }
@@ -156,9 +155,7 @@ export class ConversationController {
         userId,
         removedBy,
       );
-    } catch (error) {
-      throw new Error('Error adding user to group: ' + error.message);
-    }
+  
   }
 
   @Post('/group/:groupId/promote/:userId')
