@@ -4,13 +4,13 @@ import { Document, Types } from 'mongoose';
 @Schema({ timestamps: true })
 export class GroupMember extends Document {
   @Prop({ type: Types.ObjectId, ref: 'Group', required: true, index: true })
-  groupId: Types.ObjectId; // Links to Group
+  groupId: Types.ObjectId; 
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
-  userId: Types.ObjectId; // User in the Group
+  userId: Types.ObjectId; 
 
   @Prop({ enum: ['admin', 'member',"moderator"], default: 'member' })
-  role: string; // Role of the user in the group
+  role: string;
 }
 
 export const GroupMemberSchema = SchemaFactory.createForClass(GroupMember);
