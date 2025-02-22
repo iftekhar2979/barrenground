@@ -5,6 +5,7 @@ import {
   NotFoundException,
   ForbiddenException,
   HttpException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Http2ServerRequest } from 'http2';
@@ -127,7 +128,7 @@ export class ConversationService {
         userId: new Types.ObjectId(userId), // Ensure userId is ObjectId
       });
       if (existingMember) {
-        throw new ForbiddenException(`User ${userId} is already in the group`);
+        throw new ForbiddenException(`An User is already in the group`);
       }
 
       // Add user to the group if they aren't already a member
@@ -178,7 +179,7 @@ export class ConversationService {
     };
   }
   /** 4️⃣ Get all participants of a group */
-  async getGroup(groupId: string,skip:number,limit:number) {
+  async getGroup(groupId: string, skip: number, limit: number) {
     return await this.groupMemberModel
       .find({ groupId: new mongoose.Types.ObjectId(groupId) })
       .skip(skip)
@@ -186,14 +187,18 @@ export class ConversationService {
       .populate('userId', 'name email profilePicture');
   }
 
-  async getGroupParticipants(groupId: string,page:number,limit:number) {
-    let skip= (page-1)*limit;
-    const participants = await this.getGroup(groupId,skip,limit);
-    const count= await this.groupService.count(groupId);
+  async getGroupParticipants(groupId: string, page: number, limit: number) {
+    let skip = (page - 1) * limit;
+    const participants = await this.getGroup(groupId, skip, limit);
+    const count = await this.groupService.count(groupId);
     if (!participants || participants.length === 0) {
       throw new HttpException('No Group Found', 404);
     }
-    return {message:"Participants Retrived Successfully",data:participants,pagination:pagination(limit,page,count)};
+    return {
+      message: 'Participants Retrived Successfully',
+      data: participants,
+      pagination: pagination(limit, page, count),
+    };
   }
 
   /** 5️⃣ Admin removes a user (but not another admin) */
@@ -204,14 +209,18 @@ export class ConversationService {
   ) {
     const group = await this.groupModel.findById(groupId);
     if (!group) throw new NotFoundException('Group not found');
-// console.log(group)
+    // console.log(group)
     const remover = await this.groupService.checkMyRole(groupId, removedBy);
-    console.log(groupId,userId,remover)
+    console.log(groupId, userId, remover);
     if (!remover || remover.role !== 'admin')
       throw new ForbiddenException('Only admins can remove members');
 
     const targetUser = await this.groupService.checkMyRole(groupId, userId);
     if (!targetUser) throw new NotFoundException('User not found in the group');
+    console.log(targetUser.id, userId);
+    if (targetUser.id === userId) {
+      throw new BadRequestException("You Can't Remove Your Self");
+    }
 
     if (
       targetUser.role === 'admin' &&
@@ -221,7 +230,7 @@ export class ConversationService {
         'Only the group creator can remove an admin',
       );
     }
-await this.groupService.deleteUser(groupId,userId);
+    await this.groupService.deleteUser(groupId, userId);
 
     // If the user is an admin, remove them from the `admins` array
     if (targetUser.role === 'admin') {
@@ -230,7 +239,10 @@ await this.groupService.deleteUser(groupId,userId);
         { $pull: { admins: userId } },
       );
     }
-    return { message: 'User removed from the group' ,data:{groupId,userId}};
+    return {
+      message: 'User removed from the group',
+      data: { groupId, userId },
+    };
   }
 
   /** 6️⃣ Only the Super Admin can degrade an admin */
@@ -259,7 +271,7 @@ await this.groupService.deleteUser(groupId,userId);
     groupId: string,
     userId: string,
   ): Promise<ResponseInterface<{ groupId: string; userId: string }>> {
-    console.log(userId)
+    console.log(userId);
     const group = await this.groupModel.findById(groupId);
     if (!group) throw new NotFoundException('Group not found');
 
@@ -306,12 +318,10 @@ await this.groupService.deleteUser(groupId,userId);
     // Step 2: Fetch groups, prioritizing the user's groups
     const pipeline: any = [
       {
-        $match: { 
+        $match: {
           name: { $regex: new RegExp(searchTerm, 'i') },
-          isActive: true 
-
+          isActive: true,
         }, // Fetch only active groups
-      
       },
       {
         $addFields: {
@@ -385,13 +395,41 @@ await this.groupService.deleteUser(groupId,userId);
 
     const [groups, totalGroups] = await Promise.all([
       this.groupModel.aggregate(pipeline).exec(),
-      this.groupModel.countDocuments({ isActive: true,  name: { $regex: new RegExp(searchTerm, 'i') }, }), // Count total groups
+      this.groupModel.countDocuments({
+        isActive: true,
+        name: { $regex: new RegExp(searchTerm, 'i') },
+      }), // Count total groups
     ]);
 
     return {
       message: `${totalGroups} conversations found!`,
       data: groups,
       pagination: pagination(limit, page, totalGroups),
+    };
+  }
+
+  async leaveGroup(
+    groupId: string,
+    userId: string,
+  ): Promise<ResponseInterface<{ groupId: string; userId: string }>> {
+    const group = await this.groupModel.findById(groupId);
+    if (!group) throw new NotFoundException('Group not found');
+    // console.log(groupId, userId);
+    const user = await this.groupMemberModel.findOne({
+      groupId:new mongoose.Types.ObjectId(groupId),
+      userId:new mongoose.Types.ObjectId(userId)
+    });
+
+    if (!user) {
+      throw new BadRequestException('User Not Found!');
+    }
+    await this.groupMemberModel.deleteOne({
+      groupId:new mongoose.Types.ObjectId(groupId),
+      userId:new mongoose.Types.ObjectId(userId)
+    });
+    return {
+      message: 'Leave Successfully',
+      data: { groupId, userId },
     };
   }
 }

@@ -1,5 +1,5 @@
 import { UserService } from 'src/users/users.service';
-import { IProfile } from './../profile/interface/profile.interface';
+// import { IProfile } from './../profile/interface/profile.interface';
 import { resetPasswordDto, forgetPasswordDto } from './dto/auth.dto';
 // import { EmailService } from './../common/mailer/sendMail';
 import { JwtService } from '@nestjs/jwt';
@@ -37,7 +37,7 @@ export class AuthService {
   constructor(
     @InjectModel(Otp.name) private otpModel: Model<Otp>,
     @InjectModel(User.name) private userModel: Model<User>, // Injecting the User model
-    @InjectModel(Profile.name) private profileModel: Model<IProfile>,
+    // @InjectModel(Profile.name) private profileModel: Model<IProfile>,
     private jwtService: JwtService, // Injecting the JwtService for token generation
     private emailService: EmailService,
   ) {}

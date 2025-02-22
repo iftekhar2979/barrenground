@@ -14,9 +14,9 @@ constructor(
 ){
 
 } 
-  create(createMessageDto: CreateMessageDto): Promise<Message> {
-    const newMessage = new this.messageModel(createMessageDto);
-    return newMessage.save();
+  create(createMessageDto: CreateMessageDto) {
+    return  this.messageModel.create(createMessageDto);
+  
   }
 
   async deleteMessage(id: string): Promise<Message> {
