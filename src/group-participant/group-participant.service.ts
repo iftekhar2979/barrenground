@@ -35,7 +35,6 @@ export class GroupService {
     return this.groupMemberModel.findOne({groupId:groupId,userId:userId,role:"admin"}).exec();
   }
   checkMyRole(groupId:string ,userId:string){
-    console.log(userId)
     return this.groupMemberModel.findOne({groupId:new mongoose.Types.ObjectId(groupId),userId:new mongoose.Types.ObjectId(userId)});
   }
   count(groupId:string ):Promise<number>{

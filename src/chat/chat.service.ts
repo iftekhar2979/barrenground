@@ -22,13 +22,13 @@ export class ChatService {
     @InjectModel(Conversation.name)
     private conversationModel: Model<Conversation>,
     @InjectModel(Message.name) private messageModel: Model<Message>,
-    private messageService:MessageService,
+    private messageService: MessageService,
   ) {}
   async createConversation(
     participants: string[],
     userId: string,
     lastMessage: ObjectId | null = null,
-    message:string
+    message: string,
   ): Promise<Conversation> {
     // Validate that participants array is not empty and contains at least 2 users
     if (!participants || participants.length < 2) {
@@ -38,7 +38,7 @@ export class ChatService {
     }
     // Optionally, you could check if participants already have an existing conversation
     const existingConversation = await this.conversationModel.findOne({
-      participants: { $all: participants }, 
+      participants: { $all: participants },
     });
 
     if (existingConversation) {
@@ -47,15 +47,15 @@ export class ChatService {
       );
     }
 
-let msg = await this.messageModel.create({
-    content:message,
-    sender:new mongoID(userId)
-})
+    let msg = await this.messageModel.create({
+      content: message,
+      sender: new mongoID(userId),
+    });
 
     // Create a new conversation document
     const conversation = await this.conversationModel.create({
       participants,
-      lastMessage:msg._id,
+      lastMessage: msg._id,
       deletedBy: [],
       isBlocked: false,
       requestedBy: new mongoID(userId),
@@ -82,17 +82,17 @@ let msg = await this.messageModel.create({
     page: number = 1,
     limit: number = 10,
     type: 'pending' | 'accepted' = 'accepted',
-    term?:string
+    term?: string,
   ): Promise<any> {
     const skip = (page - 1) * limit;
     let lookupPipeline = [];
-if (term && term.trim() !== '') {
-  lookupPipeline.push({
-    $match: {
-      name: { $regex: term, $options: 'i' }
+    if (term && term.trim() !== '') {
+      lookupPipeline.push({
+        $match: {
+          name: { $regex: term, $options: 'i' },
+        },
+      });
     }
-  });
-}
     let pipeline = [
       {
         $match: {
@@ -108,7 +108,7 @@ if (term && term.trim() !== '') {
           localField: 'participants',
           foreignField: '_id',
           as: 'participantDetails',
-          pipeline: lookupPipeline
+          pipeline: lookupPipeline,
         },
       },
       {
@@ -156,25 +156,26 @@ if (term && term.trim() !== '') {
       { $limit: limit },
       { $sort: { updatedAt: -1 } },
     ] as any[];
-    let count_pipeline ={
-        participants: userId,
-      }
-      
+    let count_pipeline = {
+      participants: userId,
+    };
+
     if (type === 'pending') {
-        pipeline[0].$match.isAccepted = false;
-        pipeline[0].$match.requestedBy={$ne:new mongoID(userId)}
-        count_pipeline['isAccepted'] = false;
-        count_pipeline['requestedBy'] ={$ne:new mongoID(userId)}
-      } else {
-        pipeline[0].$match.requestedBy=new mongoID(userId)
-        // pipeline[0].$match.isAccepted = true;
-        count_pipeline['isAccepted'] = true;
-        count_pipeline['requestedBy'] =new mongoID(userId)
-      }
-     
+      pipeline[0].$match.isAccepted = false;
+      pipeline[0].$match.requestedBy = { $ne: new mongoID(userId) };
+      count_pipeline['isAccepted'] = false;
+      count_pipeline['requestedBy'] = { $ne: new mongoID(userId) };
+    } else {
+      pipeline[0].$match.requestedBy = new mongoID(userId);
+      // pipeline[0].$match.isAccepted = true;
+      count_pipeline['isAccepted'] = true;
+      count_pipeline['requestedBy'] = new mongoID(userId);
+    }
+
     // let conversations = await this.cacheManager.get(`conversations-${userId}`);
-    let totalConversations = await this.conversationModel.countDocuments(count_pipeline);
-   
+    let totalConversations =
+      await this.conversationModel.countDocuments(count_pipeline);
+
     // console.log("From Cache")
     let conversations = await this.conversationModel.aggregate(pipeline);
 
@@ -218,15 +219,10 @@ if (term && term.trim() !== '') {
     // Soft delete: Mark it but do not remove it
     return { message: 'Conversation deleted successfully', data: {} };
   }
-  async mediasFromConversation(
-    conversationID: string,
-    page = 1,
-    limit = 10,
-  ) {
+  async mediasFromConversation(conversationID: string, page = 1, limit = 10) {
     try {
-
-      console.log(page,limit)
-      let skip = (page - 1) * limit ;
+      console.log(page, limit);
+      let skip = (page - 1) * limit;
       let pipeline = [
         {
           $match: {
@@ -272,8 +268,8 @@ if (term && term.trim() !== '') {
         },
         {
           $group: {
-            _id: null, 
-            totalItems: { $sum: 1 }, 
+            _id: null,
+            totalItems: { $sum: 1 },
           },
         },
       ];
@@ -281,7 +277,7 @@ if (term && term.trim() !== '') {
         this.messageModel.aggregate(pipeline),
         this.messageModel.aggregate(count),
       ]);
-      if(totalItems[0].totalItems===0){
+      if (totalItems[0].totalItems === 0) {
         throw new HttpException('No Data Found', HttpStatus.NOT_FOUND);
       }
       return {
@@ -528,12 +524,15 @@ if (term && term.trim() !== '') {
   }
   async acceptMessageRequest(chatId: string, userId: string) {
     const conversation = await this.conversationModel.findById(chatId);
-    
+
     if (!conversation) {
       throw new HttpException('Conversation not found', HttpStatus.NOT_FOUND);
     }
-    if(conversation.isAccepted){
-      throw new HttpException('Conversation already accepted', HttpStatus.BAD_REQUEST);
+    if (conversation.isAccepted) {
+      throw new HttpException(
+        'Conversation already accepted',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (
       !conversation.requestedBy ||
@@ -550,5 +549,24 @@ if (term && term.trim() !== '') {
       message: 'Conversation .accepted successfully',
       data: conversation,
     };
+  }
+
+  async isSenderMember(
+    conversationId: ObjectId,
+    senderId: ObjectId,
+  ): Promise<boolean> {
+    const conversation = await this.conversationModel
+      .findOne({
+        _id: conversationId,
+        participants: senderId,
+      })
+      .exec();
+    if (!conversation) {
+      throw new NotFoundException(
+        ` sender is not a member of the conversation`,
+      );
+    }
+
+    return true;
   }
 }
