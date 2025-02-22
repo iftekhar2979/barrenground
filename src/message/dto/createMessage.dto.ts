@@ -15,8 +15,11 @@ export class AttachmentDto {
 
 export class CreateMessageDto {
   @IsOptional()
-  @IsString()
-  groupId: string;
+  @IsMongoId()
+  groupId: ObjectId;
+  @IsOptional()
+  @IsMongoId()
+  conversationId: ObjectId;
 
   @IsMongoId()
   sender: ObjectId; 

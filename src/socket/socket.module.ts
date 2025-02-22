@@ -17,6 +17,8 @@ import { ConversationModule } from 'src/conversation/conversation.module';
 import { Group, GroupSchema } from 'src/conversation/conversation.schema';
 import { UsersModule } from 'src/users/users.module';
 import { SocketGateway } from './socket.gateway';
+import { ChatModule } from 'src/chat/chat.module';
+import { GroupParticipantModule } from 'src/group-participant/group-participant.module';
 // import { SocketGateway } from './socket.gateway';
 @Module({
   imports: [
@@ -30,7 +32,9 @@ import { SocketGateway } from './socket.gateway';
     }),
     UsersModule,
     MessageModule, 
-    ConversationModule
+    ConversationModule,
+    ChatModule,
+   GroupParticipantModule
     // forwardRef(() => ConversationModule), // If needed
   ],
   providers: [SocketGateway, SocketService],

@@ -42,3 +42,11 @@ export class PaginationOptions {
     @IsString()
     term:'pending'|'accepted'
   }
+
+
+  export class messagesWithPagination extends PaginationOptions{
+    @IsOptional()
+    @IsString()
+    type?:"group"|"individual" 
+  
+  }

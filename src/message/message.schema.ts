@@ -5,6 +5,8 @@ import { Document, Types } from 'mongoose';
 export class Message extends Document {
   @Prop({ type: Types.ObjectId, ref: 'Group', required: false, index: true,default:null })
   groupId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'Conversation', required: false, index: true,default:null })
+  conversationId: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
   sender: Types.ObjectId;
@@ -29,5 +31,8 @@ export class Message extends Document {
   @Prop({ default: false })
   isDeleted: boolean;
 }
+
+
+
 
 export const MessageSchema = SchemaFactory.createForClass(Message);
