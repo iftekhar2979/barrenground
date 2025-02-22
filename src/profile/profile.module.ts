@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ProfileService } from './profile.service';
-import { ProfileController } from './profile.controller';
+// import { ProfileController } from './profile.controller';
 import { Profile, ProfileSchema } from './profile.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 
@@ -9,6 +9,7 @@ import { UserService } from 'src/users/users.service';
 import { UsersModule } from 'src/users/users.module';
 
 import { User, UserSchema } from 'src/users/users.schema';
+import { ProfileController } from './profile.controller';
 
 @Module({
   imports: [

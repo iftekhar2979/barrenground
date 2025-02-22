@@ -7,7 +7,7 @@ import { Socket } from 'socket.io';
 import { ConversationService } from 'src/conversation/conversation.service';
 import { CreateMessageDto } from 'src/message/dto/createMessage.dto';
 import { MessageService } from 'src/message/message.service';
-import { ProfileService } from 'src/profile/profile.service';
+// import { ProfileService } from 'src/profile/profile.service';
 
 @Injectable()
 @Injectable()
@@ -52,9 +52,9 @@ export class SocketService {
      
       this.connectedClients.set(clientId, socket);
       console.log(this.connectedClients.size);
-      socket.on('send-message', (data) => {
-        this.handleSendMessage(payload, data, socket);
-      });
+      // socket.on('send-message', (data) => {
+      //   this.handleSendMessage(payload, data, socket);
+      // });
       socket.on('join', ({groupId}) => {
         if(!groupId){
             throw new Error("Invalid GroupId")
@@ -62,10 +62,10 @@ export class SocketService {
         socket.join(groupId)
       });
     //   console.log(this.connectedUsers);
-    //   socket.on('seen', (data) => {
-    //     // console.log(data);
-    //     this.handleMessageSeen(payload.id, data.conversationID);
-    //   });
+      // socket.on('seen', (data) => {
+      //   // console.log(data);
+      //   this.handleMessageSeen(payload.id, data.conversationID);
+      // });
     //   socket.on('call-end', (data) => {
     //     this.handleCallEnd(payload, data, socket);
     //   });
@@ -103,7 +103,7 @@ export class SocketService {
       }
       socket.join(room);
       let msgBody: CreateMessageDto = {
-        sender: payload.id.toString(),
+        sender: payload.id,
         groupId: data.groupId,
         content: data.content,
         type: 'text'

@@ -1,6 +1,7 @@
 
-import { IsNotEmpty, IsOptional, IsString, IsArray, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsArray, ValidateNested, IsMongoId } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ObjectId } from 'mongoose';
 
 export class AttachmentDto {
   @IsNotEmpty()
@@ -13,13 +14,12 @@ export class AttachmentDto {
 }
 
 export class CreateMessageDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   groupId: string;
 
-  @IsNotEmpty()
-  @IsString()
-  sender: string; 
+  @IsMongoId()
+  sender: ObjectId; 
   @IsOptional()
   @IsString()
   content?: string;

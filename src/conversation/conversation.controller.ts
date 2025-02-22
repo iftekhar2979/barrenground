@@ -10,6 +10,7 @@ import {
   ForbiddenException,
   Get,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 // import { UploadService } from 'src/common/multer/upload.service';
@@ -74,7 +75,6 @@ export class ConversationController {
     if (!req.user) {
       throw new ForbiddenException('No user found');
     }
-
     try {
       return await this.groupService.addAllUsersToGroup(
         groupId,
@@ -82,7 +82,7 @@ export class ConversationController {
         req.user.id,
       );
     } catch (error) {
-      throw new Error('Error adding user to group: ' + error.message);
+      throw new BadRequestException( error.message);
     }
   }
 
@@ -179,6 +179,17 @@ export class ConversationController {
   ) {
     // const 
     return this.groupService.joinPublicGroup(groupId, req.user.id);
+  }
+  @Post('/group/:groupId/leave')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  leaveGroup(
+    @Request() req,
+    @Param('groupId') groupId: string,
+    // @Param('userId') userId: string,
+  ) {
+    // const 
+    return this.groupService.leaveGroup(groupId, req.user.id);
   }
   // async promote(
   //   @Request() req,

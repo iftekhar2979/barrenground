@@ -38,4 +38,7 @@ export class PaginationOptions {
     conversationId?: string;
     @IsString()
     type:'pending'|'accepted'
+    @IsOptional()
+    @IsString()
+    term:'pending'|'accepted'
   }

@@ -1,4 +1,4 @@
-import { CommunicationStyle, DrinkingFrequency, EducationLevel, ExerciseEnum, PetType, RelationshipPreference, SmokingStatus, SocialMediaActivity } from 'src/lifestyle/lifestyle.schema';
+// import { CommunicationStyle, DrinkingFrequency, EducationLevel, ExerciseEnum, PetType, RelationshipPreference, SmokingStatus, SocialMediaActivity } from 'src/lifestyle/lifestyle.schema';
 // import { interestAndValues } from './../dto/lifeStyleAndValues.dto';
 import { Document, Types } from 'mongoose';
 import { CoreValue, Interest } from '../profile.schema';
@@ -35,21 +35,21 @@ export interface Location{
     coordinates: [number, number]; // Coordinates (longitude, latitude)
  
 }
-export interface userLifeStyle {
-  userID?:Types.ObjectId |string
-  smoking: SmokingStatus;
-  drinking: DrinkingFrequency;
-  sleepSchedule?: string;
-  pets: PetType;
-  execise: ExerciseEnum;
-  education: EducationLevel;
-  communicationStyle: CommunicationStyle;
-  relationshipPreference: RelationshipPreference;
-  socialMedia: SocialMediaActivity;
-  values:CoreValue[]
-  interest: Interest[];
+// export interface userLifeStyle {
+//   userID?:Types.ObjectId |string
+//   smoking: SmokingStatus;
+//   drinking: DrinkingFrequency;
+//   sleepSchedule?: string;
+//   pets: PetType;
+//   execise: ExerciseEnum;
+//   education: EducationLevel;
+//   communicationStyle: CommunicationStyle;
+//   relationshipPreference: RelationshipPreference;
+//   socialMedia: SocialMediaActivity;
+//   values:CoreValue[]
+//   interest: Interest[];
 
-}
+// }
 
 
 export interface InterestAndValuesAttributes {
