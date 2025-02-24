@@ -10,6 +10,8 @@ export class Group extends Document {
   avatar : string
   @Prop({ enum: ['public', 'private'], required: true })
   type: string; 
+  @Prop({ required: false })
+  description: string; 
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
   createdBy: Types.ObjectId; 

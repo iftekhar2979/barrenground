@@ -33,8 +33,9 @@ export class ConversationService {
     name: string,
     avatar: string,
     type: string,
+    description:string,
     createdBy: string,
-    users?: string[],
+    users: string[],
   ) {
     // console.time('GROUP CREATION');
     const creatorId = new mongoose.Types.ObjectId(createdBy); // Ensure it's an ObjectId
@@ -45,6 +46,7 @@ export class ConversationService {
     const newGroup = await this.groupModel.create({
       name,
       avatar,
+      description,
       type,
       createdBy: creatorId,
       admins: [creatorId],
@@ -389,6 +391,7 @@ export class ConversationService {
           name: 1,
           avatar: 1,
           type: 1,
+          description:1,
           lastMessage: '$lastMessage.content',
           lastActiveAt: '$lastMessage.createdAt',
           totalMember:"$totalMembers.totalMembers"
@@ -396,7 +399,7 @@ export class ConversationService {
       },
     ];
 
-    const count_pipline: any = [
+    const count_pipline = [
       {
       $match: {
         name: { $regex: new RegExp(searchTerm, 'i') },

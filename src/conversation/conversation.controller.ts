@@ -37,7 +37,7 @@ export class ConversationController {
   @Roles('user')
   async createGroup(
     @Request() req,
-    @Body() body: { name: string; type: string; users: string | string[] },
+    @Body() body: { name: string; type: string; users: string | string[] , description:string },
   ) {
     if (!req.user) {
       throw new Error('No User Found');
@@ -56,6 +56,7 @@ export class ConversationController {
         body.name,
         avatarUrl,
         body.type,
+        body.description,
         req.user.id,
         body.users,
       );
