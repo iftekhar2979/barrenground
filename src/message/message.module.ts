@@ -20,7 +20,10 @@ import { SocketModule } from 'src/socket/socket.module';
       { name: Message.name, schema: MessageSchema },
     ]),
     ConversationModule,
+    // SocketModule 
+    // forwardRef(() => MessageModule), 
     // forwardRef(() => SocketModule), 
+    
   ],
   controllers: [MessageController],
   providers: [MessageService],

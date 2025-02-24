@@ -1,5 +1,9 @@
-import { pipeline } from 'stream';
-import { Injectable, NotFoundException } from '@nestjs/common';
+// import { pipeline } from 'stream';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Message } from './message.schema';
 import mongoose, { Model, ObjectId } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
@@ -8,12 +12,17 @@ import { group } from 'node:console';
 import { CreateMessageDto } from './dto/createMessage.dto';
 import { limits } from 'argon2';
 import { pagination } from 'src/common/pagination/pagination';
+import { ResponseInterface } from 'src/auth/interface/ResponseInterface';
+import { FileType } from 'aws-sdk/clients/iot';
+import { SocketService } from 'src/socket/socket.service';
+// import { pipeline } from 'node:stream';
 
 @Injectable()
 export class MessageService {
   constructor(
     @InjectModel(Message.name)
     private readonly messageModel: Model<Message>,
+    // private readonly socketService:SocketService
   ) {}
   create(createMessageDto: CreateMessageDto) {
     return this.messageModel.create(createMessageDto);
@@ -57,39 +66,141 @@ export class MessageService {
     conversationId?: ObjectId;
     isGroup?: boolean;
     groupId?: ObjectId;
-    page?:number ;
-    limit?:number 
+    page?: number;
+    limit?: number;
   }): Promise<any> {
     const limit = query.limit || 10;
-  const page = query.page || 1;
-  const skip = (page - 1) * limit;
-    let queryObj:any={
-      conversationId:query.conversationId
+    const page = query.page || 1;
+    const skip = (page - 1) * limit;
+    // console.log(group)
+
+    let queryObj: {groupId?:ObjectId,conversationId?:ObjectId} = {
+      conversationId: query.conversationId,
+    };
+    if (query.groupId) {
+      queryObj.groupId = query.groupId;
+    } else {
+      queryObj.conversationId = query.conversationId;
     }
 
-  // let skip = ((query.page || 1) -1)* query.limit || 10
+    // let skip = ((query.page || 1) -1)* query.limit || 10
     const pipeline = [
       {
         $match: {
           isDeleted: false,
-         ...queryObj
+          ...queryObj,
         },
       },
       {
-        $skip:skip 
+        $lookup: {
+          from: 'users', // Collection where sender info is stored
+          localField: 'sender', // Field in the current collection that references the sender
+          foreignField: '_id', // The _id field of the "users" collection
+          as: 'senderInfo', // Alias for the lookup result (an array)
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                profilePicture: 1,
+              },
+            },
+          ],
+        },
       },
       {
-        $limit:query.limit
-      }
+        $addFields: {
+          senderName: { $arrayElemAt: ['$senderInfo.name', 0] },
+          profilePicture: { $arrayElemAt: ['$senderInfo.profilePicture', 0] },
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: query.limit,
+      },
+      {
+        $project: {
+          senderInfo: 0,
+        },
+      },
     ];
-    const count_pipeline =  {
-          isDeleted: false,
-         ...queryObj
-        }
-   
-    const [messages, count]= await Promise.all( [this.messageModel.aggregate(pipeline), this.messageModel.countDocuments(count_pipeline)])
-  
 
-    return {message:"Message Retrived Successfully",data:messages,pagination:pagination(limit,page,count)};
+    const count_pipeline = {
+      isDeleted: false,
+      ...queryObj,
+    };
+
+    console.log(pipeline[0]);
+    const [messages, count] = await Promise.all([
+      this.messageModel.aggregate(pipeline as any),
+      this.messageModel.countDocuments(count_pipeline),
+    ]);
+    // console.log("===>",messages);
+
+    return {
+      message: 'Message Retrived Successfully',
+      data: messages,
+      pagination: pagination(limit, page, count),
+    };
+  }
+  async sendFileAsMessageWithRest(
+    userID: string,
+    conversationID: string,
+    receiverID: string,
+    file: any[],
+  ): Promise<ResponseInterface<Message>> {
+    if (file.length < 1) {
+      throw new BadRequestException('Please select a file to send');
+    }
+    // console.log(file);
+    const images = file.map((singleFile) => {
+      return {
+        url: `${singleFile.destination.slice(7, singleFile.destination.length)}/${singleFile.filename}`,
+        type: singleFile.mimetype,
+      };
+    });
+    let msgType: 'image' | 'video' =
+      images[0].type.includes('image') ||
+      images[0].type.includes('octet-stream')
+        ? 'image'
+        : 'video';
+    let msgBody = {
+      conversationID: conversationID,
+      senderID: userID,
+      receiverID: receiverID,
+      attachment: images,
+      messageType: msgType,
+      seenBy: [userID],
+    };
+
+    // let receiver = this.socketService.getSocketByUserId(receiverID);
+    // // console.log(userID)
+    // let sender = this.socketService.getSocketByUserId(userID);
+    // console.log(sender)
+    let conversationUpdate = {
+      _id: msgBody.conversationID,
+      participantName: '',
+      receiverID,
+      messageType: msgType,
+      lastMessage: `Shared ${msgType}`,
+      lastMessageCreatedAt: new Date().toISOString(),
+      profilePicture: '',
+    };
+    // if(sender){
+    //   sender.emit(`conversation-${conversationID}`, msgBody);
+    //   sender.emit(`conversation-list-update`, conversationUpdate);
+    // }
+
+    let message = await this.messageModel.create(msgBody);
+    // if (receiver) {
+    //   receiver.emit(`conversation-${conversationID}`, msgBody);
+    //   receiver.emit(`conversation-list-update`, conversationUpdate);
+    // }
+    // await this.conversationServ
+    return { message: 'File sent successfully', data: message };
   }
 }

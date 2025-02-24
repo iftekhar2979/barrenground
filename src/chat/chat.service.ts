@@ -47,13 +47,13 @@ export class ChatService {
       );
     }
 
-    let msg = await this.messageModel.create({
+    let msg: any = new this.messageModel({
       content: message,
       sender: new mongoID(userId),
     });
 
     // Create a new conversation document
-    const conversation = await this.conversationModel.create({
+    const conversation = new this.conversationModel({
       participants,
       lastMessage: msg._id,
       deletedBy: [],
@@ -61,6 +61,9 @@ export class ChatService {
       requestedBy: new mongoID(userId),
     });
 
+    msg.conversationId = conversation._id;
+
+    await Promise.all([msg.save(), conversation.save()]);
     // Save and return the conversation
     return conversation;
   }
@@ -161,16 +164,29 @@ export class ChatService {
     };
 
     if (type === 'pending') {
-      pipeline[0].$match.isAccepted = false;
+      (pipeline[0].$match = {
+        participants: new mongoID(userId),
+        deletedBy: { $nin: [new mongoID(userId)] },
+        $or: [
+          {
+            isAccepted: false,
+          },
+          {
+            requestedBy: { $ne: new mongoID(userId) },
+          },
+        ],
+      }),
+        (pipeline[0].$match.isAccepted = false);
       pipeline[0].$match.requestedBy = { $ne: new mongoID(userId) };
       count_pipeline['isAccepted'] = false;
       count_pipeline['requestedBy'] = { $ne: new mongoID(userId) };
     } else {
-      pipeline[0].$match.requestedBy = new mongoID(userId);
-      // pipeline[0].$match.isAccepted = true;
+      pipeline[0].$match['isAccepted'] = true;
+      // pipeline[0].$match.requestedBy = new mongoID(userId);
       count_pipeline['isAccepted'] = true;
       count_pipeline['requestedBy'] = new mongoID(userId);
     }
+    console.log(pipeline[0]);
 
     // let conversations = await this.cacheManager.get(`conversations-${userId}`);
     let totalConversations =
@@ -178,6 +194,7 @@ export class ChatService {
 
     // console.log("From Cache")
     let conversations = await this.conversationModel.aggregate(pipeline);
+    // console.log(conversations)
 
     return {
       message: 'Conversations retrieved successfully',
@@ -277,6 +294,7 @@ export class ChatService {
         this.messageModel.aggregate(pipeline),
         this.messageModel.aggregate(count),
       ]);
+      console.log(totalItems);
       if (totalItems[0].totalItems === 0) {
         throw new HttpException('No Data Found', HttpStatus.NOT_FOUND);
       }
@@ -534,9 +552,15 @@ export class ChatService {
         HttpStatus.BAD_REQUEST,
       );
     }
+
+    console.log(
+      !conversation.requestedBy ||
+        conversation.requestedBy.toString() == userId,
+    );
+
     if (
       !conversation.requestedBy ||
-      conversation.requestedBy.toString() !== userId
+      conversation.requestedBy.toString() == userId
     ) {
       throw new HttpException(
         'You are not authorized to accept this request',
@@ -568,5 +592,10 @@ export class ChatService {
     }
 
     return true;
+  }
+  async updateConversation(conversationId: ObjectId, lastMessage: ObjectId) {
+    let vals = await this.conversationModel.findById(conversationId);
+    vals.lastMessage = lastMessage;
+    await vals.save();
   }
 }

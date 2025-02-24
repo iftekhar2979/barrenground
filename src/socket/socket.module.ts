@@ -31,11 +31,10 @@ import { GroupParticipantModule } from 'src/group-participant/group-participant.
       signOptions: { expiresIn: '30d' },
     }),
     UsersModule,
-    MessageModule, 
-    ConversationModule,
-    ChatModule,
-   GroupParticipantModule
-    // forwardRef(() => ConversationModule), // If needed
+   forwardRef(() => MessageModule), 
+   forwardRef(() => ConversationModule), 
+   forwardRef(() => ChatModule), 
+   forwardRef(() => GroupParticipantModule), 
   ],
   providers: [SocketGateway, SocketService],
   exports: [SocketService], // Ensure service is exported if used elsewhere

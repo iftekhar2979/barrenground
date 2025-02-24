@@ -13,7 +13,7 @@ import mongoose, { Model, Types, ObjectId } from 'mongoose';
 import { ResponseInterface } from 'src/auth/interface/ResponseInterface';
 import { pagination } from 'src/common/pagination/pagination';
 import { GroupService } from 'src/group-participant/group-participant.service';
-import { pipeline } from 'stream';
+// import { pipeline, pipeline } from 'stream';
 
 console.log('I just changed the values now .');
 @Injectable()
@@ -298,30 +298,33 @@ export class ConversationService {
     };
   }
 
-  updateLastMessage(groupId: ObjectId, messageID: ObjectId): void {
-    this.groupModel.findByIdAndUpdate(groupId, { lastMessage: messageID });
+  updateLastMessage(groupId: ObjectId, messageID: ObjectId) {
+    return this.groupModel.findByIdAndUpdate(
+      groupId,
+      { lastMessage: messageID },
+      { new: true },
+    );
   }
   async getAllConversations(
     userId: string,
     page: number = 1,
     limit: number = 10,
     searchTerm?: string,
+    query: { isUserInvolved: boolean } = { isUserInvolved: false },
   ) {
     const userObjectId = new Types.ObjectId(userId);
-    // Step 1: Find all groups where the user is a member
     const userGroupIds = await this.groupMemberModel
       .find({ userId: userObjectId })
       .select('groupId')
       .lean();
 
     const involvedGroupIds = userGroupIds.map((g) => g.groupId);
-    // Step 2: Fetch groups, prioritizing the user's groups
     const pipeline: any = [
       {
         $match: {
           name: { $regex: new RegExp(searchTerm, 'i') },
           isActive: true,
-        }, // Fetch only active groups
+        },
       },
       {
         $addFields: {
@@ -335,7 +338,12 @@ export class ConversationService {
         },
       },
       {
-        $sort: { isUserInvolved: -1, lastActiveAt: -1 }, // User's groups first, then by last active
+        $match: {
+          ...query,
+        },
+      },
+      {
+        $sort: { updatedAt: -1 }, // User's groups first, then by last active
       },
       {
         $skip: (page - 1) * limit,
@@ -357,6 +365,9 @@ export class ConversationService {
           localField: '_id',
           foreignField: 'groupId',
           as: 'members',
+          pipeline:[
+           { $count:"totalMembers"}
+          ]
         },
       },
       {
@@ -365,20 +376,12 @@ export class ConversationService {
           localField: 'lastMessage',
           foreignField: '_id',
           as: 'lastMessage',
-          pipeline: [
-            {
-              $limit: 1,
-            },
-            {
-              $sort: { createdAt: -1 },
-            },
-          ],
         },
       },
       {
         $addFields: {
-          lastMessage: { $arrayElemAt: ['$lastMessage', null] },
-          // sendAt: { $arrayElemAt: ['$sendAt', null] },
+          lastMessage: { $arrayElemAt: ['$lastMessage', 0] },
+          totalMembers:{$arrayElemAt:["$members",0]}
         },
       },
       {
@@ -386,25 +389,53 @@ export class ConversationService {
           name: 1,
           avatar: 1,
           type: 1,
-          lastActiveAt: 1,
-          lastMessage: 1,
-          isUserInvolved: 1,
+          lastMessage: '$lastMessage.content',
+          lastActiveAt: '$lastMessage.createdAt',
+          totalMember:"$totalMembers.totalMembers"
         },
       },
     ];
 
+    const count_pipline: any = [
+      {
+      $match: {
+        name: { $regex: new RegExp(searchTerm, 'i') },
+        isActive: true,
+      },
+      },
+      {
+      $addFields: {
+        isUserInvolved: {
+        $cond: {
+          if: { $in: ['$_id', involvedGroupIds] },
+          then: true,
+          else: false,
+        },
+        },
+      },
+      },
+      {
+      $match: {
+        ...query,
+      },
+      },
+      {
+      $count: 'totalGroups',
+      },
+    ];
     const [groups, totalGroups] = await Promise.all([
       this.groupModel.aggregate(pipeline).exec(),
-      this.groupModel.countDocuments({
-        isActive: true,
-        name: { $regex: new RegExp(searchTerm, 'i') },
-      }), // Count total groups
+      this.groupModel.aggregate(count_pipline), // Count total groups
     ]);
+    // console.log(totalGroups)
+    if(totalGroups.length===0){
+      throw new HttpException("No Group Found!",404)
+    }
 
     return {
-      message: `${totalGroups} conversations found!`,
+      message: `${totalGroups[0].totalGroups} conversations found!`,
       data: groups,
-      pagination: pagination(limit, page, totalGroups),
+      pagination: pagination(limit, page, totalGroups[0].totalGroups),
     };
   }
 
@@ -414,24 +445,21 @@ export class ConversationService {
   ): Promise<ResponseInterface<{ groupId: string; userId: string }>> {
     const group = await this.groupModel.findById(groupId);
     if (!group) throw new NotFoundException('Group not found');
-    // console.log(groupId, userId);
     const user = await this.groupMemberModel.findOne({
-      groupId:new mongoose.Types.ObjectId(groupId),
-      userId:new mongoose.Types.ObjectId(userId)
+      groupId: new mongoose.Types.ObjectId(groupId),
+      userId: new mongoose.Types.ObjectId(userId),
     });
 
     if (!user) {
       throw new BadRequestException('User Not Found!');
     }
     await this.groupMemberModel.deleteOne({
-      groupId:new mongoose.Types.ObjectId(groupId),
-      userId:new mongoose.Types.ObjectId(userId)
+      groupId: new mongoose.Types.ObjectId(groupId),
+      userId: new mongoose.Types.ObjectId(userId),
     });
     return {
       message: 'Leave Successfully',
       data: { groupId, userId },
     };
   }
-
-  
 }

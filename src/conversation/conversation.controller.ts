@@ -88,7 +88,7 @@ export class ConversationController {
 
   @Get('/group/:groupId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('user') // You can add more roles as needed
+  @Roles('user') 
   async getAllParticipant(@Request() req, @Param('groupId') groupId: string,@Query('page') page: number = 1, @Query('limit') limit: number = 10) {
     page = Math.max(Number(page), 1);
     limit = Math.max(Number(limit), 1);
@@ -107,14 +107,16 @@ export class ConversationController {
       throw new Error('Error adding user to group: ' + error.message);
     }
   }
+  
   @Get('')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('user') // You can add more roles as needed
+  @Roles('user') 
   async getAllConversation(
     @Request() req,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Query('searchTerm') search: string,
+    @Query("involved") involved: 'yes'|'no'
   ) {
     page = Math.max(Number(page), 1);
     limit = Math.max(Number(limit), 1);
@@ -123,16 +125,23 @@ export class ConversationController {
         'Please set Pagination First with limit and page',
       );
     }
+    if(involved !== 'yes' && involved !== 'no' ){
+      throw new ForbiddenException("Involved Parameter Must be yes or no")
+    }
     if (!req.user) {
       throw new ForbiddenException('No user found');
     }
-    console.log(req.user.id);
+    let query:{isUserInvolved:boolean}={isUserInvolved:false}
+    if(involved==='yes'){
+      query={isUserInvolved:true}
+    }
     try {
       return await this.groupService.getAllConversations(
         req.user.id,
         page,
         limit,
-        search
+        search,
+        query
       );
     } catch (error) {
       throw new Error('Error adding user to group: ' + error.message);
