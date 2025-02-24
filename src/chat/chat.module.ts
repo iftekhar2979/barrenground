@@ -12,15 +12,15 @@ import { JwtModule } from '@nestjs/jwt';
 @Module({
   imports:[
     JwtModule.register({
-      secret: 'yourSecretKey', // You should move this to a config file or env variables
-      signOptions: { expiresIn: '30d' }, // Token expiration time
+      secret: 'yourSecretKey', 
+      signOptions: { expiresIn: '30d' }, 
     }),
     MongooseModule.forFeature([
       { name: Conversation.name, schema: ConversationSchema },
       {
               name: Message.name,
               schema: MessageSchema,
-            },
+       },
     ]),
     UsersModule,
     MessageModule,

@@ -105,21 +105,18 @@ export class AuthService {
       id: newUser._id,
       role: newUser.role,
       name: newUser.name,
+      profilePicture:newUser.profilePicture
     };
     // Sign the JWT token
     const token = this.jwtService.sign(payload);
     console.time('Save User');
     let savedUser = await newUser.save();
     console.timeEnd('Save User');
-    // Save the user, OTP, and profile information
     savedUser.password = undefined;
     savedUser.isEmailVerified = undefined;
     savedUser.isDeleted = undefined;
     console.time('Save OTP');
     await saveOtp.save();
-    // console.timeEnd('Save OTP');
-    // console.timeEnd('STARTED');
-    // Return the saved user and JWT token
     return {
       message:
         'Please Check Your Email and Verify you email to get full access',
@@ -195,13 +192,16 @@ export class AuthService {
         token: token,
       });
     }
+    console.log(user)
     const payload = {
       email: user.email,
       id: user._id,
       role: user.role,
       name: user.name,
       tokenFor: 'auth',
+      profilePicture:user.profilePicture
     };
+    console.log(payload)
     const token = this.jwtService.sign(payload);
     return { message: 'Logged In Successfully', data: user, token };
   }
@@ -239,6 +239,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         tokenFor: 'forget-password',
+        // profilePicture:user.profilePicture
       };
     }else{
       payload = {

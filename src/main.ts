@@ -8,6 +8,7 @@ import { MongoDuplicateKeyExceptionFilter } from './common/filters/duplicateFilt
 import { UnauthorizedExceptionFilter } from './common/filters/unAuthorizedExectionError';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { SocketService } from './socket/socket.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -24,6 +25,7 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'public'));
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalInterceptors(new LoggingInterceptor());
+ const socketService = app.get(SocketService)
   await app.listen(process.env.PORT ?? 8080);
 }
 bootstrap();

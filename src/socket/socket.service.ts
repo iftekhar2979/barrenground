@@ -7,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { group } from 'console';
 import { Server } from 'http';
-import mongoose, { ObjectId } from 'mongoose';
+import mongoose, { Model, ObjectId } from 'mongoose';
 import { Socket } from 'socket.io';
 import { ConversationService } from 'src/conversation/conversation.service';
 import { CreateMessageDto } from 'src/message/dto/createMessage.dto';
@@ -15,6 +15,8 @@ import { MessageService } from 'src/message/message.service';
 import { ObjectId as mongoId } from 'mongodb';
 import { ChatService } from 'src/chat/chat.service';
 import { GroupService } from 'src/group-participant/group-participant.service';
+import { Message } from 'src/message/message.schema';
+import { InjectModel } from '@nestjs/mongoose';
 // import { GroupService } from 'src/group-participant/group-participant.service';
 // import { ProfileService } from 'src/profile/profile.service';
 
@@ -23,12 +25,16 @@ import { GroupService } from 'src/group-participant/group-participant.service';
 export class SocketService {
   public io: Socket;
   public connectedClients: Map<string, Socket> = new Map();
-  public connectedUsers: Map<string, { name: string; socketID: string }> =
-    new Map();
+  public connectedUsers: Map<
+    string,
+    { name: string; socketID: string; profilePicture: string }
+  > = new Map();
   private writeInterval: NodeJS.Timeout;
   constructor(
     private readonly jwtService: JwtService,
-    private readonly messageService: MessageService,
+    // private readonly messageService: MessageService,
+    @InjectModel(Message.name)
+     private readonly messageModel: Model<Message>,
     private readonly conversationService: ConversationService,
     private readonly chatService: ChatService,
     private readonly groupService: GroupService,
@@ -45,18 +51,27 @@ export class SocketService {
     try {
       const clientId = socket.id;
       const token = socket.handshake.headers.authorization;
-      console.log('Connected', socket.id);
+      console.log(
+        `${socket.handshake.headers['user-agent']} Connected`,
+        socket.id,
+      );
+      // console.log(socket.handshake.headers)
       if (!token) {
+        socket.emit('error', 'You are not authorized to access this resource!');
         throw new UnauthorizedException(
           'You are not authorized to access this resource!',
         );
       }
+      // console.log()
       const jwt = token.split(' ')[1];
       const payload = this.jwtService.verify(jwt);
+      // clientId
+      console.log(payload);
 
       this.connectedUsers.set(payload.id, {
         name: payload.name,
         socketID: clientId,
+        profilePicture: payload.profilePicture,
       });
 
       this.connectedClients.set(clientId, socket);
@@ -69,6 +84,7 @@ export class SocketService {
           throw new Error('Invalid GroupId');
         }
         socket.join(groupId);
+        console.log('user Joined');
       });
       //   console.log(this.connectedUsers);
       // socket.on('seen', (data) => {
@@ -136,7 +152,7 @@ export class SocketService {
         }
       } else {
         let userExist = await this.chatService.isSenderMember(groupId, userId);
-        console.log(userExist)
+        // console.log(userExist)
         if (!userExist) {
           socket.emit('error', 'User Is Not From This Conversation');
           throw new Error('User Is Not From This Conversation');
@@ -144,13 +160,36 @@ export class SocketService {
         msgBody.groupId = null;
       }
       socket.join(room);
-
+      console.log('User Joined');
+      let vals = this.connectedUsers.get(payload.id);
       let event = `conversation-${data.groupId}`;
+      // this.connectedUsers
+      console.log(this.connectedUsers)
+      socket.to(room).emit(event, {
+        senderName: vals.name,
+        profilePicture: vals.profilePicture,
+        ...msgBody,
+      });
+      socket.emit(event, {
+        senderName: vals.name,
+        profilePicture: vals.profilePicture,
+        ...msgBody,
+      });
+      let msg = await this.messageModel.create(msgBody);
+      console.log(msg)
+      if (data.messageOn === 'group') {
+     let helo =   await this.conversationService.updateLastMessage(
+          groupId,
+          msg._id as unknown as ObjectId,
+        );
+        console.log(helo)
+      } else {
+        await this.chatService.updateConversation(
+          groupId,
+          msg._id as unknown as ObjectId,
+        );
+      }
 
-      
-      socket.to(room).emit(event, msgBody);
-      socket.emit(event, msgBody);
-      await this.messageService.create(msgBody)
       // let conversationUpdate = {
       //   _id: msgBody.groupId,
       //   participantName: '',
@@ -160,7 +199,7 @@ export class SocketService {
       //   profilePicture: '',
       // };
     } catch (error) {
-      console.log(error)
+      console.log(error);
       console.error('Error handling send-message:', error.message);
       socket.emit(`error:${data.groupId}`, {
         message: 'Failed to send message.',

@@ -66,7 +66,6 @@ export class UserController {
     if (!req.user) {
       throw new HttpException('User Not Found!', HttpStatus.NOT_FOUND);
     }
-
     return await this.userService.findUsersByName(
       req.user.id,
       name,
