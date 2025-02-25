@@ -19,6 +19,7 @@ import { UsersModule } from 'src/users/users.module';
 import { SocketGateway } from './socket.gateway';
 import { ChatModule } from 'src/chat/chat.module';
 import { GroupParticipantModule } from 'src/group-participant/group-participant.module';
+import { NotificationModule } from 'src/notification/notification.module';
 // import { SocketGateway } from './socket.gateway';
 @Module({
   imports: [
@@ -37,6 +38,6 @@ import { GroupParticipantModule } from 'src/group-participant/group-participant.
    forwardRef(() => GroupParticipantModule), 
   ],
   providers: [SocketGateway, SocketService],
-  exports: [SocketService], // Ensure service is exported if used elsewhere
+  exports: [SocketService], 
 })
 export class SocketModule {}

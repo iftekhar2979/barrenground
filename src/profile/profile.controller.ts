@@ -48,7 +48,6 @@ export class ProfileController {
     profileDto.userID = id;
     return this.profileService.registerProfile(profileDto);
   }
-  // READ: Find a profile by ID
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
@@ -56,7 +55,6 @@ export class ProfileController {
     return this.profileService.findProfileById(id);
   }
 
-  // UPDATE: Update a profile by ID
   @Patch()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
@@ -84,7 +82,6 @@ export class ProfileController {
     return this.profileService.updateLocation(user, AddLocationDto);
   }
 
-  // DELETE: Delete a profile by ID
   @Delete(':id')
   async deleteProfile(@Param('id') id: string): Promise<IProfile | null> {
     return this.profileService.deleteProfile(id);
