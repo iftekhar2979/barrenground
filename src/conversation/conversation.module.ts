@@ -12,6 +12,7 @@ import {
 import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
 import { GroupParticipantModule } from 'src/group-participant/group-participant.module';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { GroupParticipantModule } from 'src/group-participant/group-participant.
     }),
     UsersModule,
     GroupParticipantModule,
+    NotificationModule
     // UploadService
   ],
   controllers: [ConversationController],

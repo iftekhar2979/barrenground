@@ -17,6 +17,8 @@ import {
   UseInterceptors,
   UploadedFile,
   Request,
+  NotFoundException,
+  Patch,
 } from '@nestjs/common';
 import { UserService } from './users.service';
 import { IUser } from './users.interface';
@@ -94,5 +96,25 @@ export class UserController {
   imagesUpload(@Request() req, @UploadedFile() file: Express.Multer.File) {
     let user = req.user; // Assuming user info is in the request
     return this.userService.uploadProfilePicture(user, file);
+  }
+  @Get('/info/me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async accountInfoMe(@Request() req: any) {
+    try {
+      let id = req.user.id;
+      return this.userService.findMyInfo(id);
+    } catch (error) {
+      throw new NotFoundException('Information Not Found!');
+    }
+  }
+  @Patch('/info/me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  async updateAccountInformation(@Request() req,@UploadedFile() file: Express.Multer.File , @Body("name") name:string) {
+    try {
+      return this.userService.updateMe(req.user,file,name);
+    } catch (error) {
+      throw new NotFoundException('Information Not Found!');
+    }
   }
 }

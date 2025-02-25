@@ -53,6 +53,7 @@ export class ConversationController {
     }
     try {
       return this.groupService.createGroup(
+        req.user,
         body.name,
         avatarUrl,
         body.type,

@@ -16,6 +16,7 @@ import { MessageModule } from './message/message.module';
 import { GroupParticipantModule } from './group-participant/group-participant.module';
 import { SocketModule } from './socket/socket.module';
 import { ChatModule } from './chat/chat.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports:  [
@@ -33,6 +34,7 @@ import { ChatModule } from './chat/chat.module';
     GroupParticipantModule,
     SocketModule,
     ChatModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [

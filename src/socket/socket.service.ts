@@ -206,4 +206,8 @@ export class SocketService {
       });
     }
   }
+  getSocketByUserId(userId: string): Socket | undefined {
+    const socketID = this.connectedUsers.get(userId)?.socketID;
+    return socketID ? this.connectedClients.get(socketID) : undefined;
+  }
 }

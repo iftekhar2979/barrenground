@@ -13,6 +13,7 @@ import mongoose, { Model, Types, ObjectId } from 'mongoose';
 import { ResponseInterface } from 'src/auth/interface/ResponseInterface';
 import { pagination } from 'src/common/pagination/pagination';
 import { GroupService } from 'src/group-participant/group-participant.service';
+import { NotificationService } from 'src/notification/notification.service';
 // import { pipeline, pipeline } from 'stream';
 
 console.log('I just changed the values now .');
@@ -23,17 +24,18 @@ export class ConversationService {
     @InjectModel(GroupMember.name)
     private readonly groupMemberModel: Model<GroupMember>,
     private readonly groupService: GroupService,
-    // private readonly groupParticipantService: GroupMember,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async checkGroupExist(name: string) {
     return this.groupModel.findOne({ name: name });
   }
   async createGroup(
+    user,
     name: string,
     avatar: string,
     type: string,
-    description:string,
+    description: string,
     createdBy: string,
     users: string[],
   ) {
@@ -57,10 +59,25 @@ export class ConversationService {
         userId: creatorId,
         role: 'admin',
       }),
-
       this.groupService.addAllUsersToGroup(
         new mongoose.Types.ObjectId(newGroup._id.toString()),
         users.map((u) => new mongoose.Types.ObjectId(u)),
+      ),
+      this.notificationService.createNotification({
+        userID: new mongoose.Types.ObjectId(creatorId) as unknown as ObjectId,
+        message: `${name} Group Is Created Successfully `,
+        key: newGroup._id as ObjectId,
+        routingType: 'group',
+      }),
+      this.notificationService.batchUpdateNotificationsBulk(
+        users.map(
+          (u) => new mongoose.Types.ObjectId(u),
+        ) as unknown as ObjectId[],
+        {
+          message: `You are Added To ${name} group by ${user.name} `,
+          routingType: 'group',
+          key: newGroup._id as unknown as ObjectId,
+        },
       ),
     ]);
 
@@ -90,8 +107,12 @@ export class ConversationService {
     });
     if (existingMember)
       throw new ForbiddenException('User is already in the group');
-
-    // Create a new group member with ObjectId for groupId and userId
+    await this.notificationService.createNotification({
+      userID: new mongoose.Types.ObjectId(userId) as unknown as ObjectId,
+      message: `You Have Added to a ${group.name} `,
+      key: new Types.ObjectId(groupId) as unknown as ObjectId,
+      routingType: 'group',
+    });
     return {
       message: 'Member Added Successfully',
       data: await this.groupMemberModel.create({
@@ -213,7 +234,6 @@ export class ConversationService {
     if (!group) throw new NotFoundException('Group not found');
     // console.log(group)
     const remover = await this.groupService.checkMyRole(groupId, removedBy);
-    console.log(groupId, userId, remover);
     if (!remover || remover.role !== 'admin')
       throw new ForbiddenException('Only admins can remove members');
 
@@ -223,7 +243,6 @@ export class ConversationService {
     if (targetUser.id === userId) {
       throw new BadRequestException("You Can't Remove Your Self");
     }
-
     if (
       targetUser.role === 'admin' &&
       group.createdBy.toString() !== removedBy
@@ -241,6 +260,7 @@ export class ConversationService {
         { $pull: { admins: userId } },
       );
     }
+
     return {
       message: 'User removed from the group',
       data: { groupId, userId },
@@ -367,9 +387,7 @@ export class ConversationService {
           localField: '_id',
           foreignField: 'groupId',
           as: 'members',
-          pipeline:[
-           { $count:"totalMembers"}
-          ]
+          pipeline: [{ $count: 'totalMembers' }],
         },
       },
       {
@@ -383,7 +401,7 @@ export class ConversationService {
       {
         $addFields: {
           lastMessage: { $arrayElemAt: ['$lastMessage', 0] },
-          totalMembers:{$arrayElemAt:["$members",0]}
+          totalMembers: { $arrayElemAt: ['$members', 0] },
         },
       },
       {
@@ -391,39 +409,39 @@ export class ConversationService {
           name: 1,
           avatar: 1,
           type: 1,
-          description:1,
+          description: 1,
           lastMessage: '$lastMessage.content',
           lastActiveAt: '$lastMessage.createdAt',
-          totalMember:"$totalMembers.totalMembers"
+          totalMember: '$totalMembers.totalMembers',
         },
       },
     ];
 
     const count_pipline = [
       {
-      $match: {
-        name: { $regex: new RegExp(searchTerm, 'i') },
-        isActive: true,
-      },
-      },
-      {
-      $addFields: {
-        isUserInvolved: {
-        $cond: {
-          if: { $in: ['$_id', involvedGroupIds] },
-          then: true,
-          else: false,
-        },
+        $match: {
+          name: { $regex: new RegExp(searchTerm, 'i') },
+          isActive: true,
         },
       },
+      {
+        $addFields: {
+          isUserInvolved: {
+            $cond: {
+              if: { $in: ['$_id', involvedGroupIds] },
+              then: true,
+              else: false,
+            },
+          },
+        },
       },
       {
-      $match: {
-        ...query,
-      },
+        $match: {
+          ...query,
+        },
       },
       {
-      $count: 'totalGroups',
+        $count: 'totalGroups',
       },
     ];
     const [groups, totalGroups] = await Promise.all([
@@ -431,8 +449,8 @@ export class ConversationService {
       this.groupModel.aggregate(count_pipline), // Count total groups
     ]);
     // console.log(totalGroups)
-    if(totalGroups.length===0){
-      throw new HttpException("No Group Found!",404)
+    if (totalGroups.length === 0) {
+      throw new HttpException('No Group Found!', 404);
     }
 
     return {
