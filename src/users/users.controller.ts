@@ -112,6 +112,9 @@ export class UserController {
   @UseInterceptors(FileInterceptor('file', multerConfig))
   async updateAccountInformation(@Request() req,@UploadedFile() file: Express.Multer.File , @Body("name") name:string) {
     try {
+      // if(!file){
+
+      // }
       return this.userService.updateMe(req.user,file,name);
     } catch (error) {
       throw new NotFoundException('Information Not Found!');

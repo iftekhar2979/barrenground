@@ -62,7 +62,9 @@ export class ConversationController {
         body.users,
       );
     } catch (error) {
-      throw new Error('Error uploading file: ' + error.message);
+      // console.log(error)
+      throw new BadRequestException("Image Type Not Allowed")
+      // throw new Error('Error uploading file: ' + error.message);
     }
   }
 
@@ -186,7 +188,6 @@ export class ConversationController {
   joinGroup(
     @Request() req,
     @Param('groupId') groupId: string,
-    // @Param('userId') userId: string,
   ) {
     // const 
     return this.groupService.joinPublicGroup(groupId, req.user.id);

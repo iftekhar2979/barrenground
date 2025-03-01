@@ -150,28 +150,28 @@ export class UserService {
   async uploadProfilePicture(user: User, file: FileType): Promise<any> {
     // Working with thread to resize image
     console.time('Compressing Image');
-    fs.readFile(file.path)
-      .then(async (data) => {
-        console.log("Data",data)
-        const resizedBuffer = await resizeImage(data, 800, 600);
+    // fs.readFile(file.path)
+    //   .then(async (data) => {
+    //     console.log("Data",data)
+    //     const resizedBuffer = await resizeImage(data, 800, 600);
 
-        const tempPath = path.join(
-          __dirname,
-          '..',
-          '..',
-          'public',
-          'uploads',
-          file.filename,
-        );
+    //     const tempPath = path.join(
+    //       __dirname,
+    //       '..',
+    //       '..',
+    //       'public',
+    //       'uploads',
+    //       file.filename,
+    //     );
 
-        await fs.writeFile(tempPath, resizedBuffer); // Use async write
-        await fs.readFile(tempPath); // Use async read
+    //     await fs.writeFile(tempPath, resizedBuffer); // Use async write
+    //     await fs.readFile(tempPath); // Use async read
 
-        // Further processing here...
-      })
-      .catch((err) => {
-        throw new Error('Error reading or writing file buffer: ' + err.message);
-      });
+    //     // Further processing here...
+    //   })
+    //   .catch((err) => {
+    //     throw new Error('Error reading or writing file buffer: ' + err.message);
+    //   });
     // console.log()
     console.log(`${file.destination.split('/')[1]}/${file.filename}`);
     console.timeEnd('Compressing Image');

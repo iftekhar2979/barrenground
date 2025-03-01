@@ -29,7 +29,7 @@ export class ChatService {
     userId: string,
     lastMessage: ObjectId | null = null,
     message: string,
-  ): Promise<Conversation> {
+  ): Promise<any> {
     // Validate that participants array is not empty and contains at least 2 users
     if (!participants || participants.length < 2) {
       throw new Error(
@@ -42,9 +42,74 @@ export class ChatService {
     });
 
     if (existingConversation) {
-      throw new ConflictException(
-        'Conversation already exists between these participants.',
-      );
+      const cnv = await this.conversationModel.aggregate([
+        {
+          $match: {
+            participants: {
+              $all: participants.map((item) => new mongoID(item)),
+            },
+          },
+        },
+        { $unwind: '$participants' },
+        { $match: { participants: { $ne: new mongoID(userId) } } },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'participants',
+            foreignField: '_id',
+            as: 'participantDetails',
+          },
+        },
+        {
+          $lookup: {
+            from: 'messages',
+            localField: 'lastMessage',
+            foreignField: '_id',
+            as: 'lastMessage',
+          },
+        },
+        {
+          $addFields: {
+            lastMessage: { $arrayElemAt: ['$lastMessage', 0] },
+          },
+        },
+        { $unwind: '$participantDetails' },
+        {
+          $lookup: {
+            from: 'activestatuses',
+            localField: 'participantDetails._id',
+            foreignField: 'userID',
+            as: 'userStatus',
+          },
+        },
+        {
+          $addFields: {
+            userActiveStatus: { $arrayElemAt: ['$userStatus', 0] },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            participantName: '$participantDetails.name',
+            participantEmail: '$participantDetails.email',
+            receiverID: '$participantDetails._id',
+            profilePicture: '$participantDetails.profilePicture',
+            lastMessage: '$lastMessage.content',
+            lastMessageCreatedAt: '$lastMessage.createdAt',
+            messageType: '$lastMessage.messageType',
+            isActive: '$userActiveStatus.isActive',
+            lastActive: '$userActiveStatus.updatedAt',
+          },
+        },
+      ]);
+      return {
+        statusCode: 409,
+        message: 'Conversation Exist',
+        data: cnv[0],
+      };
+      // throw new ConflictException(
+      //   'Conversation already exists between these participants.',
+      // );
     }
 
     let msg: any = new this.messageModel({
@@ -96,7 +161,7 @@ export class ChatService {
         },
       });
     }
-    let pipeline = [
+    let pipeline: any = [
       {
         $match: {
           participants: new mongoID(userId),
@@ -158,39 +223,86 @@ export class ChatService {
       { $skip: skip },
       { $limit: limit },
       { $sort: { updatedAt: -1 } },
-    ] as any[];
-    let count_pipeline = {
-      participants: userId,
-    };
+    ];
 
+    // Create the base count pipeline
+    let count_pipline: any = [
+      {
+        $match: {
+          participants: new mongoID(userId),
+          deletedBy: { $nin: [new mongoID(userId)] },
+        },
+      },
+      { $unwind: '$participants' },
+      { $match: { participants: { $ne: new mongoID(userId) } } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'participants',
+          foreignField: '_id',
+          as: 'participantDetails',
+          pipeline: lookupPipeline,
+        },
+      },
+    ];
+
+    // Apply the condition based on the `type`
     if (type === 'pending') {
-      (pipeline[0].$match = {
-        participants: new mongoID(userId),
-        deletedBy: { $nin: [new mongoID(userId)] },
-        $or: [
-          {
-            isAccepted: false,
-          },
-          {
-            requestedBy: { $ne: new mongoID(userId) },
-          },
-        ],
-      }),
-        (pipeline[0].$match.isAccepted = false);
-      pipeline[0].$match.requestedBy = { $ne: new mongoID(userId) };
-      count_pipeline['isAccepted'] = false;
-      count_pipeline['requestedBy'] = { $ne: new mongoID(userId) };
+      // Modify the $match for the 'pending' type
+      pipeline[0] = {
+        $match: {
+          participants: new mongoID(userId),
+          deletedBy: { $nin: [new mongoID(userId)] },
+          requestedBy: { $ne: new mongoID(userId) },
+          isAccepted: false,
+        },
+      };
+
+      count_pipline[0] = {
+        $match: {
+          participants: new mongoID(userId),
+          deletedBy: { $nin: [new mongoID(userId)] },
+          requestedBy: { $ne: new mongoID(userId) },
+          isAccepted: false,
+        },
+      };
     } else {
-      pipeline[0].$match['isAccepted'] = true;
-      // pipeline[0].$match.requestedBy = new mongoID(userId);
-      count_pipeline['isAccepted'] = true;
-      count_pipeline['requestedBy'] = new mongoID(userId);
+      // Modify the $match for the other types
+      pipeline[0] = {
+        $match: {
+          participants: new mongoID(userId),
+          deletedBy: { $nin: [new mongoID(userId)] },
+          $or: [
+            { isAccepted: true },
+            { requestedBy: { $eq: new mongoID(userId) } },
+          ],
+        },
+      };
+      count_pipline[0] = {
+        $match: {
+          participants: new mongoID(userId),
+          deletedBy: { $nin: [new mongoID(userId)] },
+          $or: [
+            { isAccepted: true },
+            { requestedBy: { $eq: new mongoID(userId) } },
+          ],
+        },
+      };
+      // count_pipeline[0] = {
+      //   $match: {
+      //     participants: new mongoID(userId),
+      //     deletedBy: { $nin: [new mongoID(userId)] },
+      //     $or: [
+      //       { isAccepted: true },
+      //       { requestedBy: { $eq: new mongoID(userId) } },
+      //     ],
+      //   },
+      // };
     }
     console.log(pipeline[0]);
-
     // let conversations = await this.cacheManager.get(`conversations-${userId}`);
     let totalConversations =
-      await this.conversationModel.countDocuments(count_pipeline);
+      await this.conversationModel.countDocuments(count_pipline);
 
     // console.log("From Cache")
     let conversations = await this.conversationModel.aggregate(pipeline);
@@ -238,7 +350,6 @@ export class ChatService {
   }
   async mediasFromConversation(conversationID: string, page = 1, limit = 10) {
     try {
-      console.log(page, limit);
       let skip = (page - 1) * limit;
       let pipeline = [
         {
