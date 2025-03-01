@@ -28,8 +28,12 @@ export class CreateMessageDto {
   content?: string;
   @IsOptional()
   @IsString()
-  type?: 'text'|'image'|'video';
-
+  type?: 'text'|'image'|'video' |'poll';
+  @IsOptional()
+  poll?: {
+    question: string;
+    options?: { optionText: string; votes?: number }[];
+  };
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

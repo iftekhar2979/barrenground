@@ -132,7 +132,7 @@ export class ChatController {
       participants,
       userID,
       null,
-      message
+      message,
     );
   }
   @Post('/:chatId/accept')

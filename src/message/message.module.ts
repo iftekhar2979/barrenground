@@ -8,6 +8,10 @@ import { Message, MessageSchema } from './message.schema';
 import { UsersModule } from 'src/users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { SocketModule } from 'src/socket/socket.module';
+import { GroupMember, GroupMemberSchema } from 'src/group-participant/group-participant.schema';
+import { ChatModule } from 'src/chat/chat.module';
+import { Group, GroupSchema } from 'src/conversation/conversation.schema';
+import { Conversation, ConversationSchema } from 'src/chat/chat.schema';
 
 @Module({
   imports:[
@@ -18,9 +22,13 @@ import { SocketModule } from 'src/socket/socket.module';
        UsersModule,
     MongooseModule.forFeature([
       { name: Message.name, schema: MessageSchema },
+      { name: Group.name, schema: GroupSchema },
+      { name: GroupMember.name, schema: GroupMemberSchema },
+      { name: Group.name, schema: GroupSchema },
+      { name: Conversation.name, schema: ConversationSchema },
     ]),
     ConversationModule,
-    // SocketModule 
+    SocketModule 
     // forwardRef(() => MessageModule), 
     // forwardRef(() => SocketModule), 
     

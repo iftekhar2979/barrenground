@@ -17,16 +17,29 @@ export class Message extends Document {
   @Prop({
     type: [
       {
-        fileUrl: String,
-        type:String
+        fileUrl: { type: String, required: true },
+        type: { type: String, required: true }
       },
     ],
     default: [],
   })
-  attachments: {
-    type:string
-    fileUrl: string;
-  }[]
+  attachments: { fileUrl: string; type: string }[];
+  @Prop({
+    type: {
+      question: { type: String, required: false },
+      options: [
+        {
+          optionText: { type: String, required: true },
+          votes: { type: Number, default: 0 }
+        }
+      ]
+    },
+    default: null
+  })
+  poll?: {
+    question: string;
+    options: { optionText: string; votes: number }[];
+  };
 
   @Prop({ default: false })
   isDeleted: boolean;

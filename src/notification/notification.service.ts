@@ -31,6 +31,7 @@ export class NotificationService {
       // let receiverExist=
       const newNotification = new this.notificationModel(createNotificationDto);
       await newNotification.save();
+      console.log(newNotification)
       let detailNotification: CreateDetailedNotificationOnly = {
         notificationID: newNotification._id.toString(),
         key: createNotificationDto.key,

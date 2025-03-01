@@ -5,6 +5,7 @@ import { extname } from 'path';
 const path = require('path');
 import { FileType } from 'src/gallery/interface/gallery.interface';
 import { randomBytes } from 'crypto';
+import { BadRequestException } from '@nestjs/common';
 // import fs from 'fs';
 const fs = require('fs');
 
@@ -63,6 +64,7 @@ export const multerConfig = {
   fileFilter: (req, file, callback) => {
     console.log("MULTER")
     console.time('fileFilter');
+    console.log(file.mimetype)
     const allowedMimes = [
       'image/jpeg', 'image/png', 'image/gif',
       'audio/mpeg', 'audio/wav',
@@ -72,6 +74,7 @@ export const multerConfig = {
     if (allowedMimes.includes(file.mimetype)) {
       callback(null, true);
     } else {
+      // throw new BadRequestException("File Type Not Allowed!")
       callback(new Error('Invalid file type.'), false);
     }
     console.timeEnd("fileFilter");

@@ -305,6 +305,7 @@ export class ConversationService {
       groupId,
       userId,
     });
+
     if (existingMember) {
       throw new ForbiddenException('User is already in the group');
     }
@@ -334,18 +335,20 @@ export class ConversationService {
     searchTerm?: string,
     query: { isUserInvolved: boolean } = { isUserInvolved: false },
   ) {
-    const userObjectId = new Types.ObjectId(userId);
+    const userObjectId = new mongoose.Types.ObjectId(userId);
     const userGroupIds = await this.groupMemberModel
       .find({ userId: userObjectId })
       .select('groupId')
       .lean();
-
+console.log(userGroupIds)
     const involvedGroupIds = userGroupIds.map((g) => g.groupId);
+    console.log(involvedGroupIds)
     const pipeline: any = [
       {
         $match: {
           name: { $regex: new RegExp(searchTerm, 'i') },
           isActive: true,
+        
         },
       },
       {
