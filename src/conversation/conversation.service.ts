@@ -340,7 +340,6 @@ export class ConversationService {
       .find({ userId: userObjectId })
       .select('groupId')
       .lean();
-console.log(userGroupIds)
     const involvedGroupIds = userGroupIds.map((g) => g.groupId);
     console.log(involvedGroupIds)
     const pipeline: any = [
@@ -367,9 +366,7 @@ console.log(userGroupIds)
           ...query,
         },
       },
-      {
-        $sort: { updatedAt: -1 }, // User's groups first, then by last active
-      },
+     
       {
         $skip: (page - 1) * limit,
       },
@@ -416,7 +413,11 @@ console.log(userGroupIds)
           lastMessage: '$lastMessage.content',
           lastActiveAt: '$lastMessage.createdAt',
           totalMember: '$totalMembers.totalMembers',
+          updatedAt:1
         },
+      },
+      {
+        $sort: { updatedAt: -1 },
       },
     ];
 

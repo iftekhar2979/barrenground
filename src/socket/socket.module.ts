@@ -3,7 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MessageModule } from './../message/message.module';
 import { SocketService } from './socket.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Message, MessageSchema } from 'src/message/message.schema';
+import { Message, MessageSchema, PollVote, PollVoteSchema } from 'src/message/message.schema';
 import { ConversationModule } from 'src/conversation/conversation.module';
 import { Group, GroupSchema } from 'src/conversation/conversation.schema';
 import { UsersModule } from 'src/users/users.module';
@@ -24,6 +24,10 @@ import {
       { name: Group.name, schema: GroupSchema },
       { name: Conversation.name, schema: ConversationSchema },
       { name: GroupMember.name, schema: GroupMemberSchema },
+      {
+        name: PollVote.name,
+        schema: PollVoteSchema,
+      },
     ]),
     JwtModule.register({
       secret: 'yourSecretKey',

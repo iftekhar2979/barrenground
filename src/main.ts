@@ -9,6 +9,7 @@ import { UnauthorizedExceptionFilter } from './common/filters/unAuthorizedExecti
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { SocketService } from './socket/socket.service';
+import { SeederService } from './seed/seedService';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -19,13 +20,16 @@ async function bootstrap() {
       forbidNonWhitelisted: true, 
     }),
   );
+  const seederService = app.get(SeederService);
+  await seederService.seedData()
+    await seederService.seedAdminUser();
   app.useGlobalFilters(new MongoDuplicateKeyExceptionFilter());
   app.useGlobalFilters(new ValidationExceptionFilter());
   app.useGlobalFilters(new UnauthorizedExceptionFilter());
   app.useStaticAssets(join(__dirname, '..', 'public'));
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalInterceptors(new LoggingInterceptor());
- const socketService = app.get(SocketService)
+//  const socketService = app.get(SocketService)
   await app.listen(process.env.PORT ?? 8080);
 }
 bootstrap();

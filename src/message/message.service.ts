@@ -18,6 +18,7 @@ import { FileType } from 'aws-sdk/clients/iot';
 import { SocketService } from 'src/socket/socket.service';
 import { Conversation } from 'src/chat/chat.schema';
 import { Group } from 'src/conversation/conversation.schema';
+import { GroupMember } from 'src/group-participant/group-participant.schema';
 // import { pipeline } from 'node:stream';
 
 @Injectable()
@@ -27,14 +28,13 @@ export class MessageService {
     private readonly messageModel: Model<Message>,
     @InjectModel(Conversation.name)
     private readonly conversationModel: Model<Conversation>,
-    @InjectModel(Group.name)
-    private readonly groupMemberModel: Model<Group>,
+    @InjectModel(GroupMember.name)
+    private readonly groupMemberModel: Model<GroupMember>,
     private readonly socketService: SocketService,
   ) {}
   create(createMessageDto: CreateMessageDto) {
     return this.messageModel.create(createMessageDto);
   }
-
   async deleteMessage(id: string): Promise<Message> {
     if (!id) {
       throw new NotFoundException(`Message with id ${id} is invalid`);
@@ -48,7 +48,6 @@ export class MessageService {
 
     return deletedMessage;
   }
-
   findAllForGroupPaginated(
     groupId: string,
     page: number = 1,
@@ -67,7 +66,6 @@ export class MessageService {
       .limit(limit)
       .exec();
   }
-
   async getMessages(query: {
     userId?: ObjectId;
     conversationId?: ObjectId;
@@ -184,26 +182,26 @@ export class MessageService {
       attachments: images,
       type: msgType,
     };
-
     if (messageOn === 'group') {
       msgBody.conversationId = null;
       let userExist = await this.checkMyRole(
         groupId.toString(),
         userID.toString(),
       );
+      console.log(userExist)
       if (!userExist) {
-        this.socketService
-          .getSocketByUserId(userID)
-          .emit('error', 'User Is Not From This Group');
-        throw new Error('User Is Not From This Group');
+        // this.socketService
+        //   .getSocketByUserId(userID)
+        //   .emit('error', 'User Is Not From This Group');
+          throw new BadRequestException('User Is Not From This Group');
       }
     } else {
       let userExist = await this.isSenderMember(groupId, userId);
       if (!userExist) {
-        this.socketService
-          .getSocketByUserId(userID)
-          .emit('error', 'User Is Not From This Group');
-        throw new Error('User Is Not From This Conversation');
+        // this.socketService
+        //   .getSocketByUserId(userID)
+        //   .emit('error', 'User Is Not From This Group');
+          throw new BadRequestException('User Is Not From This Group');
       }
       msgBody.groupId = null;
     }
@@ -253,7 +251,16 @@ async createPoll(  userID: string,
   question:string,
   options:  { optionText: string; votes?: number }[]
 ){
- 
+  let userExist = await this.checkMyRole(
+    conversationID.toString(),
+    userID.toString(),
+  );
+  if (!userExist) {
+    // this.socketService
+    //   .getSocketByUserId(userID)
+    //   .emit('error', 'User Is Not From This Group');
+    throw new BadRequestException('User Is Not From This Group');
+  }
   let msgBody :CreateMessageDto= {
     groupId: new mongoose.Types.ObjectId(conversationID) as unknown as ObjectId,
     conversationId:null,
@@ -302,4 +309,6 @@ async createPoll(  userID: string,
 
     return true;
   }
+
+  
 }

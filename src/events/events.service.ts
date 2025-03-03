@@ -53,6 +53,9 @@ export class EventService {
       {
         $limit: limit,
       },
+      {
+        $sort: { updatedAt: -1 },
+      },
     ]);
     const totalEvent = await this.eventModel.countDocuments();
 
@@ -85,8 +88,10 @@ export class EventService {
     return this.eventModel.findById(eventId).exec();
   }
   async delete(eventId: string) {
-    console.log(eventId)
-    await this.eventModel.deleteOne({_id:new mongoose.Types.ObjectId(eventId)});
+    console.log(eventId);
+    await this.eventModel.deleteOne({
+      _id: new mongoose.Types.ObjectId(eventId),
+    });
     return {
       message: 'Event Deleted Successfully',
       data: {},
@@ -113,8 +118,8 @@ export class EventService {
       eventId: new mongoose.Types.ObjectId(eventId),
       userID: new mongoose.Types.ObjectId(userId),
     });
-  
-    console.log(eventInformation)
+
+    console.log(eventInformation);
     // Validate the eventInformation document before saving
     try {
       await eventInformation.validate(); // Check for validation errors
@@ -122,12 +127,12 @@ export class EventService {
       console.error('Validation failed for eventInformation:', error);
       throw new BadRequestException('Event information is not valid');
     }
-  
+
     console.log('Event information:', eventInformation);
-  
+
     // Save both the event and eventInformation
     await Promise.all([eventInformation.save(), event.save()]);
-  
+
     return {
       message: 'Joined the event successfully',
       data: eventInformation, // Return event information if needed

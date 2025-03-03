@@ -29,5 +29,5 @@ export class Group extends Document {
   isActive: boolean; 
 
 }
-
 export const GroupSchema = SchemaFactory.createForClass(Group);
+GroupSchema.index({ updatedAt: 1 });

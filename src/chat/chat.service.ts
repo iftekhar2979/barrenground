@@ -218,6 +218,7 @@ export class ChatService {
           messageType: '$lastMessage.messageType',
           isActive: '$userActiveStatus.isActive',
           lastActive: '$userActiveStatus.updatedAt',
+          updatedAt:1
         },
       },
       { $skip: skip },
@@ -348,19 +349,35 @@ export class ChatService {
     // Soft delete: Mark it but do not remove it
     return { message: 'Conversation deleted successfully', data: {} };
   }
-  async mediasFromConversation(conversationID: string, page = 1, limit = 10) {
+  async mediasFromConversation(
+    conversationID: string,
+    page = 1,
+    limit = 10,
+    type: string,
+  ) {
     try {
       let skip = (page - 1) * limit;
+      console.log(type)
+      let matchQuery: {
+        conversationId?: ObjectId;
+        groupId?: ObjectId;
+      } = {
+        conversationId: new mongoID(conversationID) as unknown as ObjectId,
+      };
+      if (type === 'group') {
+        delete matchQuery.conversationId;
+        matchQuery.groupId = new mongoID(conversationID) as unknown as ObjectId;
+      }
       let pipeline = [
         {
           $match: {
-            conversationID: new mongoID(conversationID), // Match conversation ID
-            messageType: { $in: ['image', 'video'] }, // Filter message types
+            ...matchQuery,
+            type: { $in: ['image', 'video'] },
           },
         },
         {
           $unwind: {
-            path: '$file', // Flatten the `file` array into individual elements
+            path: '$attachments', // Flatten the `file` array into individual elements
           },
         },
         {
@@ -372,7 +389,7 @@ export class ChatService {
         {
           $group: {
             _id: null, // Group all documents into one group
-            allFiles: { $push: '$file' }, // Combine paginated files into a single array
+            allFiles: { $push: '$attachments' }, // Combine paginated files into a single array
           },
         },
         {
@@ -382,16 +399,17 @@ export class ChatService {
           },
         },
       ];
+      console.log(pipeline[0].$match)
       let count = [
         {
           $match: {
-            conversationID: new mongoID(conversationID), // Match conversation ID
-            messageType: { $in: ['image', 'video'] }, // Filter message types
+            ...matchQuery,
+            type: { $in: ['image', 'video'] }, // Filter message types
           },
         },
         {
           $unwind: {
-            path: '$file', // Flatten the `file` array into individual elements
+            path: '$attachments', // Flatten the `file` array into individual elements
           },
         },
         {
@@ -405,7 +423,7 @@ export class ChatService {
         this.messageModel.aggregate(pipeline),
         this.messageModel.aggregate(count),
       ]);
-      console.log(totalItems);
+      console.log(medias);
       if (totalItems[0].totalItems === 0) {
         throw new HttpException('No Data Found', HttpStatus.NOT_FOUND);
       }
