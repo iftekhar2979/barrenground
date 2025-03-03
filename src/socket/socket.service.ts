@@ -13,7 +13,7 @@ import mongoose, { Model, ObjectId } from 'mongoose';
 import { Socket } from 'socket.io';
 import { CreateMessageDto } from 'src/message/dto/createMessage.dto';
 import { ObjectId as mongoId } from 'mongodb';
-import { Message, PollVote } from 'src/message/message.schema';
+import { Message, PollVote, Reaction } from 'src/message/message.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Group } from 'src/conversation/conversation.schema';
 import { GroupMember } from 'src/group-participant/group-participant.schema';
@@ -33,6 +33,8 @@ export class SocketService {
     // private readonly messageService: MessageService,
     @InjectModel(Message.name)
     private readonly messageModel: Model<Message>,
+    @InjectModel(Reaction.name)
+    private readonly reactionModel: Model<Reaction>,
     @InjectModel(Conversation.name)
     private readonly conversationModel: Model<Conversation>,
     @InjectModel(GroupMember.name)
@@ -97,6 +99,12 @@ export class SocketService {
         id: payload.id,
       });
 
+      socket.on(
+        'reaction',
+        (data: { messageId: string; reactionType: string }) => {
+          this.handleReaction(payload, data, socket);
+        },
+      );
       socket.on('disconnect', () => {
         // console.log(this.connectedUsers)
         socket.broadcast.emit(`active-users`, {
@@ -105,7 +113,6 @@ export class SocketService {
           id: payload.id,
         });
         console.log('disconnected', this.connectedUsers.get(payload.id));
-        // this.profileService.createBulkDisconnect(this.connectedUsers);
         this.connectedClients.delete(clientId);
         this.connectedUsers.delete(payload.id);
       });
@@ -184,11 +191,8 @@ export class SocketService {
         msgBody.groupId = null;
       }
       socket.join(room);
-      console.log('User Joined');
       let vals = this.connectedUsers.get(payload.id);
       let event = `conversation-${data.groupId}`;
-      // this.connectedUsers
-      console.log(vals);
       socket.to(room).emit(event, {
         senderName: vals.name,
         profilePicture: vals.profilePicture,
@@ -206,29 +210,34 @@ export class SocketService {
           groupId,
           msg._id as unknown as ObjectId,
         );
-        // console.log(updatedMessage);
       } else {
         updatedMessage = await this.updateConversation(
           groupId,
           msg._id as unknown as ObjectId,
         );
       }
-      console.log(updatedMessage);
-
       let conversationUpdate = {
         _id: data.groupId,
-        name: data.messageOn === 'group' ? updatedMessage.name : vals.profilePicture,
+        name: data.messageOn === 'group' ? updatedMessage.name : vals.name,
         messageType: 'text',
         lastMessage: data.content,
-        profilePicture: data.messageOn === 'group' ? updatedMessage.avatar : '',
+        profilePicture:
+          data.messageOn === 'group'
+            ? updatedMessage.avatar
+            : vals.profilePicture,
         lastMessageCreatedAt: new Date().toISOString(),
         updatedAt: new Date(),
-        messageOn : data.messageOn
+        messageOn: data.messageOn,
       };
-      socket
-        .to(data.groupId)
-        .emit('conversationListUpdate', conversationUpdate);
-      socket.emit('conversationListUpdate', conversationUpdate);
+      if (data.messageOn === 'group') {
+        socket.to(data.groupId).emit('groupListUpdate', conversationUpdate);
+        socket.emit('groupListUpdate', conversationUpdate);
+      } else {
+        socket
+          .to(data.groupId)
+          .emit('conversationListUpdate', conversationUpdate);
+        socket.emit('conversationListUpdate', conversationUpdate);
+      }
     } catch (error) {
       console.log(error);
       console.error('Error handling send-message:', error.message);
@@ -420,4 +429,111 @@ export class SocketService {
     const socketID = this.connectedUsers.get(userId)?.socketID;
     return socketID ? this.connectedClients.get(socketID) : undefined;
   }
+  async handleReaction(
+    payload: { id: string; name: string; profilePicture: string },
+    data: { messageId: string; reactionType: string },
+    socket: Socket,
+  ): Promise<void> {
+    try {
+      let messageId = new mongoId(data.messageId) as unknown as ObjectId;
+      let userId = new mongoId(payload.id.toString()) as unknown as ObjectId;
+  
+      // Fetch the message
+      let message = await this.messageModel.findById(messageId);
+      if (!message) throw new Error('Message not found');
+  
+      // ✅ Convert reactions to a Map if it's not already
+      if (!message.reactions || !(message.reactions instanceof Map)) {
+        message.reactions = new Map(Object.entries({
+          haha: 0,
+          cancel: 0,
+          like: 0,
+          love: 0,
+          angry: 0,
+          ok: 0,
+        }));
+      }
+  
+      console.log("Message Before Reaction:", message);
+  
+      // Fetch the user's existing reaction
+      let existingReaction: Reaction | null = await this.reactionModel.findOne({
+        messageId,
+        userId,
+      });
+  
+      console.log('Existing Reaction:', existingReaction);
+  
+      const reactionType = String(data.reactionType); // Ensure it's a string
+  
+      if (existingReaction) {
+        if (existingReaction.value === reactionType) {
+          // ❌ If the user already reacted with the same type, remove the reaction
+          const currentCount = message.reactions.get(reactionType) || 0;
+          message.reactions.set(reactionType, Math.max(currentCount - 1, 0)); // Prevent negative values
+          await this.reactionModel.deleteOne({ _id: existingReaction._id });
+        } else {
+          // 🔄 If the user changes the reaction, remove the old one and add the new one
+          if (existingReaction.value) {
+            const oldCount = message.reactions.get(existingReaction.value) || 0;
+            message.reactions.set(existingReaction.value, Math.max(oldCount - 1, 0)); // Prevent negative values
+          }
+          const newCount = message.reactions.get(reactionType) || 0;
+          message.reactions.set(reactionType, newCount + 1);
+          existingReaction.value = reactionType;
+          await existingReaction.save();
+        }
+      } else {
+        // ➕ New reaction
+        const newCount = message.reactions.get(reactionType) || 0;
+        message.reactions.set(reactionType, newCount + 1);
+  
+        console.log("Message After Reaction:", message);
+  
+        const reaction = new this.reactionModel({
+          messageId,
+          userId,
+          value: reactionType, // Ensure it's stored as a string
+        });
+  
+        await Promise.all([reaction.save(), message.save()]);
+      }
+  
+      // ✅ Ensure all values in `message.reactions` are numbers
+      message.reactions.forEach((value, key) => {
+        if (typeof value !== "number") {
+          console.warn(`Invalid value in reactions for key: ${key}, resetting to 0`);
+          message.reactions.set(key, 0);
+        }
+      });
+  
+      // ✅ Convert `Map` to a plain object before saving
+      message.reactions = new Map(Object.entries(Object.fromEntries(message.reactions)));
+  
+      // Save the updated message
+      await message.save();
+  
+      // Emit updated reaction data
+      let room = message.groupId
+        ? message.groupId.toString()
+        : message.conversationId.toString();
+  
+      socket.to(room).emit('messageReactionUpdated', {
+        messageId: data.messageId,
+        reactions: Object.fromEntries(message.reactions), // Convert Map to JSON
+      });
+  
+      socket.emit('messageReactionUpdated', {
+        messageId: data.messageId,
+        reactions: Object.fromEntries(message.reactions), // Convert Map to JSON
+      });
+  
+    } catch (error) {
+      console.error('Error handling message reaction:', error.message);
+      socket.emit('error', { message: 'Failed to react to message.' });
+    }
+  }
+  
+  
+  
 }

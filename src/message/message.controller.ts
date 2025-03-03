@@ -84,11 +84,6 @@ export class MessageController {
     @UploadedFiles() files: { files?: Express.Multer.File[] },
   ) {
     const user = req.user;
-    // if(req.files.files.length===0){
-    //   throw new BadRequestException(
-    //     'At Least Provide a File ..',
-    //   );
-    // }
     if (messageOn !== 'group' && messageOn !== 'individual') {
       throw new BadRequestException(
         'Invalid message type .. messageOn should be group || individual',

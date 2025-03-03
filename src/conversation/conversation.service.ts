@@ -209,6 +209,28 @@ export class ConversationService {
       .limit(limit)
       .populate('userId', 'name email profilePicture');
   }
+  async getGroupById(groupId: string, userId: string) {
+    const userGroupIds = await this.groupMemberModel
+      .find({ userId: new mongoose.Types.ObjectId(userId) })
+      .select('groupId')
+      .lean();
+    const involvedGroupIds = userGroupIds.map((g) => g.groupId);
+    let group = await this.groupModel.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(groupId) } },
+      {
+        $addFields: {
+          isUserInvolved: {
+            $cond: {
+              if: { $in: ['$_id', involvedGroupIds] },
+              then: true,
+              else: false,
+            },
+          },
+        },
+      },
+    ]);
+    return group
+  }
 
   async getGroupParticipants(groupId: string, page: number, limit: number) {
     let skip = (page - 1) * limit;
@@ -341,13 +363,12 @@ export class ConversationService {
       .select('groupId')
       .lean();
     const involvedGroupIds = userGroupIds.map((g) => g.groupId);
-    console.log(involvedGroupIds)
+    console.log(involvedGroupIds);
     const pipeline: any = [
       {
         $match: {
           name: { $regex: new RegExp(searchTerm, 'i') },
           isActive: true,
-        
         },
       },
       {
@@ -366,7 +387,7 @@ export class ConversationService {
           ...query,
         },
       },
-     
+
       {
         $skip: (page - 1) * limit,
       },
@@ -413,7 +434,7 @@ export class ConversationService {
           lastMessage: '$lastMessage.content',
           lastActiveAt: '$lastMessage.createdAt',
           totalMember: '$totalMembers.totalMembers',
-          updatedAt:1
+          updatedAt: 1,
         },
       },
       {

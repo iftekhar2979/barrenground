@@ -3,7 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MessageModule } from './../message/message.module';
 import { SocketService } from './socket.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Message, MessageSchema, PollVote, PollVoteSchema } from 'src/message/message.schema';
+import { Message, MessageSchema, PollVote, PollVoteSchema, Reaction, ReactionSchema } from 'src/message/message.schema';
 import { ConversationModule } from 'src/conversation/conversation.module';
 import { Group, GroupSchema } from 'src/conversation/conversation.schema';
 import { UsersModule } from 'src/users/users.module';
@@ -28,6 +28,9 @@ import {
         name: PollVote.name,
         schema: PollVoteSchema,
       },
+      {
+        name:Reaction.name,schema:ReactionSchema
+      }
     ]),
     JwtModule.register({
       secret: 'yourSecretKey',

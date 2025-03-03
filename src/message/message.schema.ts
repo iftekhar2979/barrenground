@@ -59,23 +59,25 @@ export class Message extends Document {
     options: { optionText: string; votes: number }[];
   };
   @Prop({
-    type: {
-      reactions: [
-        {
-          optionText: { type: String, required: true },
-          votes: { type: Number, default: 0 },
-        },
-      ],
+    type: Map,
+    of: Number,
+    default: () => {
+      return {
+        haha: 0,
+        cancel: 0,
+        like: 0,
+        love: 0,
+        angry: 0,
+        ok: 0,
+      };
     },
-    default: null,
   })
-  reactions?: { optionText: string; votes: number }[];
+  reactions?: Map<string, number>;
+  
   @Prop({ default: false })
   isDeleted: boolean;
 }
-
 export const MessageSchema = SchemaFactory.createForClass(Message);
-
 @Schema({ timestamps: true })
 export class PollVote extends Document {
   @Prop({ type: Types.ObjectId, ref: 'Message', required: true })
@@ -94,8 +96,8 @@ export class Reaction extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   userId: Types.ObjectId;
 
-  @Prop({ required: true })
-  optionIndex: number;
+  @Prop({type:String, required: true ,})
+  value: string;
 }
 
 export const PollVoteSchema = SchemaFactory.createForClass(PollVote);

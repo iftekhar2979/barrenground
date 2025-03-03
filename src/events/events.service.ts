@@ -48,17 +48,17 @@ export class EventService {
         },
       },
       {
+        $sort: { createdAt: -1 },
+      },
+      {
         $skip: (page - 1) * limit,
       },
       {
         $limit: limit,
       },
-      {
-        $sort: { updatedAt: -1 },
-      },
+   
     ]);
     const totalEvent = await this.eventModel.countDocuments();
-
     return {
       message: 'Event Retrived Successfully',
       data: events,
