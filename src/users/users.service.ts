@@ -148,7 +148,6 @@ export class UserService {
     return this.userModel.findByIdAndDelete(id).exec();
   }
   async uploadProfilePicture(user: User, file: FileType): Promise<any> {
-    // Working with thread to resize image
     console.time('Compressing Image');
     // fs.readFile(file.path)
     //   .then(async (data) => {
@@ -183,6 +182,20 @@ export class UserService {
   }
 
   async updateMe(user, file: FileType, name: string): Promise<ResponseInterface<{}>> {
+    if(!file){
+      await Promise.all([
+        this.profileModel.findOneAndUpdate(
+          { userID: user.id },
+          { fullName: name },
+          { new: true },
+        ),
+      ]);
+      return {
+        message: 'Information Upated Successfully',
+        data: {},
+        statusCode: 200,
+      };
+    }
     await Promise.all([
       this.updateProfilePicture(
         user.id,
