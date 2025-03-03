@@ -1,5 +1,6 @@
 import { Conversation } from './../chat/chat.schema';
 import {
+  ConflictException,
   forwardRef,
   Inject,
   Injectable,
@@ -12,7 +13,7 @@ import mongoose, { Model, ObjectId } from 'mongoose';
 import { Socket } from 'socket.io';
 import { CreateMessageDto } from 'src/message/dto/createMessage.dto';
 import { ObjectId as mongoId } from 'mongodb';
-import { Message } from 'src/message/message.schema';
+import { Message, PollVote } from 'src/message/message.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Group } from 'src/conversation/conversation.schema';
 import { GroupMember } from 'src/group-participant/group-participant.schema';
@@ -36,6 +37,10 @@ export class SocketService {
     private readonly conversationModel: Model<Conversation>,
     @InjectModel(GroupMember.name)
     private readonly groupMemberModel: Model<GroupMember>,
+    @InjectModel(Group.name)
+    private readonly groupModel: Model<Group>,
+    @InjectModel(PollVote.name)
+    private readonly pollVoteModel: Model<PollVote>,
   ) {}
   afterInit(server: Server) {
     console.log('Socket server initialized');
@@ -44,7 +49,7 @@ export class SocketService {
     });
   }
 
- async handleConnection(socket: Socket) {
+  async handleConnection(socket: Socket) {
     try {
       const clientId = socket.id;
       const token = socket.handshake.headers.authorization;
@@ -74,6 +79,11 @@ export class SocketService {
       socket.on('send-message', (data) => {
         this.handleSendMessage(payload, data, socket);
       });
+      socket.on('vote', (data) => {
+        this.handleVote(payload, data, socket);
+      });
+      const rooms = await this.handleUsersToJoinRoom(payload.id);
+      socket.join(rooms);
       socket.on('join', ({ groupId }) => {
         if (!groupId) {
           throw new Error('Invalid GroupId');
@@ -81,19 +91,19 @@ export class SocketService {
         socket.join(groupId);
         console.log('user Joined');
       });
-        socket.broadcast.emit(`active-users`,{
-          "message": `${payload.name} is Online .`,
-          "isActive": true,
-          "id": payload.id
-      })
-   
+      socket.broadcast.emit(`active-users`, {
+        message: `${payload.name} is Online .`,
+        isActive: true,
+        id: payload.id,
+      });
+
       socket.on('disconnect', () => {
         // console.log(this.connectedUsers)
-        socket.broadcast.emit(`active-users`,{
-          "message": `${payload.name} is offline .`,
-          "isActive": false,
-          "id": payload.id
-      })
+        socket.broadcast.emit(`active-users`, {
+          message: `${payload.name} is offline .`,
+          isActive: false,
+          id: payload.id,
+        });
         console.log('disconnected', this.connectedUsers.get(payload.id));
         // this.profileService.createBulkDisconnect(this.connectedUsers);
         this.connectedClients.delete(clientId);
@@ -110,29 +120,29 @@ export class SocketService {
     this.connectedUsers.delete(userId);
   }
   async isSenderMember(
-      conversationId: ObjectId,
-      senderId: ObjectId,
-    ): Promise<boolean> {
-      const conversation = await this.conversationModel
-        .findOne({
-          _id: conversationId,
-          participants: senderId,
-        })
-        .exec();
-      if (!conversation) {
-        throw new NotFoundException(
-          ` sender is not a member of the conversation`,
-        );
-      }
-  
-      return true;
+    conversationId: ObjectId,
+    senderId: ObjectId,
+  ): Promise<boolean> {
+    const conversation = await this.conversationModel
+      .findOne({
+        _id: conversationId,
+        participants: senderId,
+      })
+      .exec();
+    if (!conversation) {
+      throw new NotFoundException(
+        ` sender is not a member of the conversation`,
+      );
     }
-   checkMyRole(groupId:string ,userId:string){
-     return this.groupMemberModel.findOne({
-           groupId: new mongoose.Types.ObjectId(groupId),
-           userId: new mongoose.Types.ObjectId(userId),
-         });
-   }
+
+    return true;
+  }
+  checkMyRole(groupId: string, userId: string) {
+    return this.groupMemberModel.findOne({
+      groupId: new mongoose.Types.ObjectId(groupId),
+      userId: new mongoose.Types.ObjectId(userId),
+    });
+  }
   async handleSendMessage(
     payload: { id: string },
     data: {
@@ -159,11 +169,8 @@ export class SocketService {
 
       if (data.messageOn === 'group') {
         msgBody.conversationId = null;
-        let userExist = await this.checkMyRole(
-          data.groupId,
-          payload.id,
-        );
-        console.log("USER EXIST ",userExist)
+        let userExist = await this.checkMyRole(data.groupId, payload.id);
+        console.log('USER EXIST ', userExist);
         if (!userExist) {
           socket.emit('error', 'User Is Not From This Group');
           throw new Error('User Is Not From This Group');
@@ -193,27 +200,35 @@ export class SocketService {
         ...msgBody,
       });
       let msg = await this.messageModel.create(msgBody);
+      let updatedMessage;
       if (data.messageOn === 'group') {
-        let helo = await this.updateLastMessage(
+        updatedMessage = await this.updateLastMessage(
           groupId,
           msg._id as unknown as ObjectId,
         );
-        console.log(helo);
+        // console.log(updatedMessage);
       } else {
-        await this.updateConversation(
+        updatedMessage = await this.updateConversation(
           groupId,
           msg._id as unknown as ObjectId,
         );
       }
+      console.log(updatedMessage);
 
-      // let conversationUpdate = {
-      //   _id: msgBody.groupId,
-      //   participantName: '',
-      //   messageType: 'text',
-      //   lastMessage: data.content,
-      //   lastMessageCreatedAt: new Date().toISOString(),
-      //   profilePicture: '',
-      // };
+      let conversationUpdate = {
+        _id: data.groupId,
+        name: data.messageOn === 'group' ? updatedMessage.name : vals.profilePicture,
+        messageType: 'text',
+        lastMessage: data.content,
+        profilePicture: data.messageOn === 'group' ? updatedMessage.avatar : '',
+        lastMessageCreatedAt: new Date().toISOString(),
+        updatedAt: new Date(),
+        messageOn : data.messageOn
+      };
+      socket
+        .to(data.groupId)
+        .emit('conversationListUpdate', conversationUpdate);
+      socket.emit('conversationListUpdate', conversationUpdate);
     } catch (error) {
       console.log(error);
       console.error('Error handling send-message:', error.message);
@@ -223,12 +238,14 @@ export class SocketService {
     }
   }
   updateLastMessage(groupId: ObjectId, messageID: ObjectId) {
-    return this.groupMemberModel.findByIdAndUpdate(
+    // console.log(groupId,messageID)
+    return this.groupModel.findByIdAndUpdate(
       groupId,
       { lastMessage: messageID },
       { new: true },
     );
   }
+
   async updateConversation(conversationId: ObjectId, lastMessage: ObjectId) {
     let vals = await this.conversationModel.findById(conversationId);
     vals.lastMessage = lastMessage;
@@ -294,7 +311,7 @@ export class SocketService {
         });
       }
     });
-    console.log(friendsInfo)
+    console.log(friendsInfo);
   }
   async userDisconnect(id: string, socket, friendsInfo: any[]) {
     try {
@@ -314,6 +331,91 @@ export class SocketService {
     }
   }
 
+  async handleVote(
+    payload: { id: string },
+    data: {
+      groupId: string;
+      optionIndex: number;
+      msgId: string;
+    },
+    socket: Socket,
+  ) {
+    try {
+      if (!data.msgId || !data.groupId || data.optionIndex === undefined) {
+        throw new Error('Please provide Message ID, Group ID, and optionIndex');
+      }
+
+      const message = await this.messageModel.findById(data.msgId);
+      if (!message || !message.poll) {
+        throw new Error('Poll not found for this message');
+      }
+
+      if (
+        data.optionIndex < 0 ||
+        data.optionIndex >= message.poll.options.length
+      ) {
+        throw new Error('Invalid poll option index');
+      }
+
+      // ✅ Check if user has already voted
+      const existingVote = await this.pollVoteModel.findOne({
+        messageId: new mongoose.Types.ObjectId(data.msgId),
+        userId: new mongoose.Types.ObjectId(payload.id),
+      });
+
+      if (existingVote) {
+        // ✅ User has already voted, so unvote
+        message.poll.options[existingVote.optionIndex].votes -= 1; // Decrease vote count
+        await this.pollVoteModel.deleteOne({ _id: existingVote._id }); // Remove vote record
+      } else {
+        // ✅ User hasn't voted, register new vote
+        await new this.pollVoteModel({
+          messageId: new mongoose.Types.ObjectId(data.msgId),
+          userId: new mongoose.Types.ObjectId(payload.id),
+          optionIndex: data.optionIndex,
+        }).save();
+
+        message.poll.options[data.optionIndex].votes += 1; // Increase vote count
+      }
+
+      // ✅ Save updated message
+      await message.save();
+
+      // ✅ Broadcast updated poll to group
+      socket.join(data.groupId);
+      socket.to(data.groupId).emit(`conversation-${data.groupId}`, message);
+      socket.emit(`conversation-${data.groupId}`, message);
+
+      return message.poll;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async handleUsersToJoinRoom(userId: string): Promise<string[]> {
+    const [rooms, conversations] = await Promise.all([
+      this.groupMemberModel
+        .find({ userId: new mongoId(userId) }, { groupId: 1, _id: 0 })
+        .sort({ updatedAt: -1 })
+        .limit(50)
+        .lean(),
+      this.conversationModel
+        .find({ participants: { $in: new mongoId(userId) } }, { _id: 1 })
+        .sort({ updatedAt: -1 })
+        .limit(50)
+        .lean(),
+    ]);
+
+    let conversation = [...rooms, ...conversations] as unknown as {
+      groupId?: ObjectId;
+      _id?: ObjectId;
+    }[];
+
+    const roomIds = conversation.map((room) =>
+      room.groupId ? room.groupId.toString() : room._id.toString(),
+    );
+    return roomIds;
+  }
   getSocketByUserId(userId: string): Socket | undefined {
     const socketID = this.connectedUsers.get(userId)?.socketID;
     return socketID ? this.connectedClients.get(socketID) : undefined;

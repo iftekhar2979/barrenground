@@ -16,7 +16,8 @@ import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guard/role-gurad';
 import { Roles } from 'src/common/custom-decorator/role.decorator';
 import {
-    ConversationOptions,
+  ConversationOptions,
+  MediaOptions,
   PaginationDto,
   PaginationOptions,
   SearchByNameWithPagination,
@@ -42,7 +43,7 @@ export class ChatController {
         Number(pagination.page),
         Number(pagination.limit),
         pagination.type,
-        pagination.term
+        pagination.term,
       );
     } catch (error) {
       console.log(error);
@@ -70,13 +71,16 @@ export class ChatController {
   @Get('media/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
-  getMedia(@Param() conversationID: { id: string }, @Query() pagination:PaginationOptions) {
+  getMedia(
+    @Param() conversationID: { id: string },
+    @Query() pagination: MediaOptions,
+  ) {
     try {
-      // console.log(conversationID)
       return this.conversationService.mediasFromConversation(
         conversationID.id,
         Number(pagination.page),
         Number(pagination.limit),
+        pagination.types,
       );
     } catch (error) {
       console.log(error);
@@ -114,7 +118,7 @@ export class ChatController {
   @Roles('user')
   createConversation(
     @Request() req,
-    @Body("message") message:string, 
+    @Body('message') message: string,
     @Query('participant') participant: string,
   ) {
     let userID = req.user.id;

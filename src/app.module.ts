@@ -17,6 +17,8 @@ import { GroupParticipantModule } from './group-participant/group-participant.mo
 import { SocketModule } from './socket/socket.module';
 import { ChatModule } from './chat/chat.module';
 import { NotificationModule } from './notification/notification.module';
+import { SettingsModule } from './settings/settings.module';
+import { SeederService } from './seed/seedService';
 
 @Module({
   imports:  [
@@ -35,6 +37,7 @@ import { NotificationModule } from './notification/notification.module';
     SocketModule,
     ChatModule,
     NotificationModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -43,6 +46,7 @@ import { NotificationModule } from './notification/notification.module';
       useClass: ValidationExceptionFilter,
     },
     AppService,
+    SeederService,
   ],
 })
 export class AppModule {}
