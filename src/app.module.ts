@@ -19,6 +19,7 @@ import { ChatModule } from './chat/chat.module';
 import { NotificationModule } from './notification/notification.module';
 import { SettingsModule } from './settings/settings.module';
 import { SeederService } from './seed/seedService';
+import { ReportModule } from './report/report.module';
 
 @Module({
   imports:  [
@@ -38,6 +39,7 @@ import { SeederService } from './seed/seedService';
     ChatModule,
     NotificationModule,
     SettingsModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [

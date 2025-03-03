@@ -19,6 +19,7 @@ export class JwtAuthGuard {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
 
+    console.log(token)
     if (!token) {
       throw new UnauthorizedException(
         'You are not authorized to access this resource!',
@@ -46,6 +47,7 @@ export class JwtAuthGuard {
       console.timeEnd("JWT GUARD")
       return true;
     } catch (error) {
+      console.log(error)
       throw new UnauthorizedException(
         'You are not authorized to access this resource!',
       );
