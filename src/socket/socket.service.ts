@@ -13,10 +13,11 @@ import mongoose, { Model, ObjectId } from 'mongoose';
 import { Socket } from 'socket.io';
 import { CreateMessageDto } from 'src/message/dto/createMessage.dto';
 import { ObjectId as mongoId } from 'mongodb';
-import { Message, PollVote, Reaction } from 'src/message/message.schema';
+import { Message, MessageSeen, PollVote, Reaction } from 'src/message/message.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Group } from 'src/conversation/conversation.schema';
 import { GroupMember } from 'src/group-participant/group-participant.schema';
+import { MessageService } from './socket.seen.service';
 
 @Injectable()
 @Injectable()
@@ -43,6 +44,9 @@ export class SocketService {
     private readonly groupModel: Model<Group>,
     @InjectModel(PollVote.name)
     private readonly pollVoteModel: Model<PollVote>,
+    @InjectModel(MessageSeen.name)
+    private readonly seenModel:Model<MessageSeen>,
+    private readonly messageService:MessageService
   ) {}
   afterInit(server: Server) {
     console.log('Socket server initialized');
@@ -84,6 +88,12 @@ export class SocketService {
       socket.on('vote', (data) => {
         this.handleVote(payload, data, socket);
       });
+      socket.on('seen', ({messageId,groupId}:{messageId:string,groupId:string}) => {
+        // this.handleVote(payload, data, socket);
+this.messageService.markAsSeen({messageId:new mongoose.Types.ObjectId(messageId) as unknown as ObjectId,userId:new mongoose.Types.ObjectId(groupId) as unknown as ObjectId,name:payload.name,image:payload.profilePicture})
+socket.emit("message-seen",{image:payload.profilePicture,name:payload.name})      
+socket.to(groupId).emit("message-seen",{image:payload.profilePicture,name:payload.name}) 
+});
       const rooms = await this.handleUsersToJoinRoom(payload.id);
       socket.join(rooms);
       socket.on('join', ({ groupId }) => {
@@ -429,6 +439,7 @@ export class SocketService {
     const socketID = this.connectedUsers.get(userId)?.socketID;
     return socketID ? this.connectedClients.get(socketID) : undefined;
   }
+  
   async handleReaction(
     payload: { id: string; name: string; profilePicture: string },
     data: { messageId: string; reactionType: string },
