@@ -4,7 +4,7 @@ import { MessageService } from './message.service';
 import { ConversationModule } from 'src/conversation/conversation.module';
 // import { Mongoose } from 'mongoose';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Message, MessageSchema, Reaction, ReactionSchema } from './message.schema';
+import { Message, MessageSchema, MessageSeen, Reaction, ReactionSchema } from './message.schema';
 import { UsersModule } from 'src/users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { SocketModule } from 'src/socket/socket.module';
@@ -26,6 +26,7 @@ import { Conversation, ConversationSchema } from 'src/chat/chat.schema';
       { name: GroupMember.name, schema: GroupMemberSchema },
       { name: Group.name, schema: GroupSchema },
       { name: Conversation.name, schema: ConversationSchema },
+      {name:MessageSeen.name,schema:MessageSchema}
     
     ]),
     ConversationModule,
