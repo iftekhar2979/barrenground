@@ -1,8 +1,5 @@
 import { Conversation } from './../chat/chat.schema';
 import {
-  ConflictException,
-  forwardRef,
-  Inject,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -13,13 +10,12 @@ import mongoose, { Model, ObjectId } from 'mongoose';
 import { Socket } from 'socket.io';
 import { CreateMessageDto } from 'src/message/dto/createMessage.dto';
 import { ObjectId as mongoId } from 'mongodb';
-import { Message, MessageSeen, PollVote, Reaction } from 'src/message/message.schema';
+import { Message, PollVote } from 'src/message/message.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Group } from 'src/conversation/conversation.schema';
 import { GroupMember } from 'src/group-participant/group-participant.schema';
 import { MessageService } from './socket.seen.service';
 
-@Injectable()
 @Injectable()
 export class SocketService {
   public io: Socket;
@@ -34,8 +30,6 @@ export class SocketService {
     // private readonly messageService: MessageService,
     @InjectModel(Message.name)
     private readonly messageModel: Model<Message>,
-    @InjectModel(Reaction.name)
-    private readonly reactionModel: Model<Reaction>,
     @InjectModel(Conversation.name)
     private readonly conversationModel: Model<Conversation>,
     @InjectModel(GroupMember.name)
@@ -44,9 +38,7 @@ export class SocketService {
     private readonly groupModel: Model<Group>,
     @InjectModel(PollVote.name)
     private readonly pollVoteModel: Model<PollVote>,
-    @InjectModel(MessageSeen.name)
-    private readonly seenModel:Model<MessageSeen>,
-    private readonly messageService:MessageService
+    private readonly messageService: MessageService,
   ) {}
   afterInit(server: Server) {
     console.log('Socket server initialized');
@@ -88,12 +80,43 @@ export class SocketService {
       socket.on('vote', (data) => {
         this.handleVote(payload, data, socket);
       });
-      socket.on('seen', ({messageId,groupId}:{messageId:string,groupId:string}) => {
-        // this.handleVote(payload, data, socket);
-this.messageService.markAsSeen({messageId:new mongoose.Types.ObjectId(messageId) as unknown as ObjectId,userId:new mongoose.Types.ObjectId(groupId) as unknown as ObjectId,name:payload.name,image:payload.profilePicture})
-socket.emit("message-seen",{image:payload.profilePicture,name:payload.name})      
-socket.to(groupId).emit("message-seen",{image:payload.profilePicture,name:payload.name}) 
-});
+      socket.on(
+        'seen',
+        async ({
+          messageId,
+          groupId,
+          sender,
+        }: {
+          messageId: string;
+          groupId: string;
+          sender: string;
+        }) => {
+          if (sender === payload.id) {
+            console.error("Same Sender With Message")
+            return;
+          }
+          let message = await this.messageService.markAsSeen({
+            messageId: new mongoose.Types.ObjectId(
+              messageId,
+            ) as unknown as ObjectId,
+            userId: new mongoose.Types.ObjectId(groupId) as unknown as ObjectId,
+            name: payload.name,
+            image: payload.profilePicture,
+          });
+          if (!message.alreadySeen) {
+            socket.emit('message-seen', {
+              image: payload.profilePicture,
+              name: payload.name,
+              userId: payload.id,
+            });
+            socket.to(groupId).emit('message-seen', {
+              image: payload.profilePicture,
+              name: payload.name,
+              userId: payload.id,
+            });
+          }
+        },
+      );
       const rooms = await this.handleUsersToJoinRoom(payload.id);
       socket.join(rooms);
       socket.on('join', ({ groupId }) => {
@@ -112,7 +135,7 @@ socket.to(groupId).emit("message-seen",{image:payload.profilePicture,name:payloa
       socket.on(
         'reaction',
         (data: { messageId: string; reactionType: string }) => {
-          this.handleReaction(payload, data, socket);
+          this.messageService.handleReaction(payload, data, socket);
         },
       );
       socket.on('disconnect', () => {
@@ -273,23 +296,6 @@ socket.to(groupId).emit("message-seen",{image:payload.profilePicture,name:payloa
   async myFriend(id: string) {
     try {
       let allFriends: any[] = [];
-      //   const conversation = JSON.parse(cachedConversation as string);
-      //   if (!conversation) return;
-      //   if (conversation.length === 0) return;
-      //   conversation.forEach((element) => {
-      //     const friends = element.participants.filter(
-      //       (participant: any) => participant._id.toString() !== id,
-      //     );
-      //     allFriends = [...allFriends, ...friends];
-      //   });
-      //   console.log(conversation);
-      //   const friendsInfo = allFriends.map((friend: any) => ({
-      //     id: friend._id,
-      //     name: friend.name,
-      //   }));
-
-      //   return friendsInfo;
-      // } else {
       const conversation: any = await this.conversationModel
         .find({
           participants: new mongoose.Types.ObjectId(id),
@@ -363,19 +369,16 @@ socket.to(groupId).emit("message-seen",{image:payload.profilePicture,name:payloa
       if (!data.msgId || !data.groupId || data.optionIndex === undefined) {
         throw new Error('Please provide Message ID, Group ID, and optionIndex');
       }
-
       const message = await this.messageModel.findById(data.msgId);
       if (!message || !message.poll) {
         throw new Error('Poll not found for this message');
       }
-
       if (
         data.optionIndex < 0 ||
         data.optionIndex >= message.poll.options.length
       ) {
         throw new Error('Invalid poll option index');
       }
-
       // ✅ Check if user has already voted
       const existingVote = await this.pollVoteModel.findOne({
         messageId: new mongoose.Types.ObjectId(data.msgId),
@@ -439,112 +442,4 @@ socket.to(groupId).emit("message-seen",{image:payload.profilePicture,name:payloa
     const socketID = this.connectedUsers.get(userId)?.socketID;
     return socketID ? this.connectedClients.get(socketID) : undefined;
   }
-  
-  async handleReaction(
-    payload: { id: string; name: string; profilePicture: string },
-    data: { messageId: string; reactionType: string },
-    socket: Socket,
-  ): Promise<void> {
-    try {
-      let messageId = new mongoId(data.messageId) as unknown as ObjectId;
-      let userId = new mongoId(payload.id.toString()) as unknown as ObjectId;
-  
-      // Fetch the message
-      let message = await this.messageModel.findById(messageId);
-      if (!message) throw new Error('Message not found');
-  
-      // ✅ Convert reactions to a Map if it's not already
-      if (!message.reactions || !(message.reactions instanceof Map)) {
-        message.reactions = new Map(Object.entries({
-          haha: 0,
-          cancel: 0,
-          like: 0,
-          love: 0,
-          angry: 0,
-          ok: 0,
-        }));
-      }
-  
-      console.log("Message Before Reaction:", message);
-  
-      // Fetch the user's existing reaction
-      let existingReaction: Reaction | null = await this.reactionModel.findOne({
-        messageId,
-        userId,
-      });
-  
-      console.log('Existing Reaction:', existingReaction);
-  
-      const reactionType = String(data.reactionType); // Ensure it's a string
-  
-      if (existingReaction) {
-        if (existingReaction.value === reactionType) {
-          // ❌ If the user already reacted with the same type, remove the reaction
-          const currentCount = message.reactions.get(reactionType) || 0;
-          message.reactions.set(reactionType, Math.max(currentCount - 1, 0)); // Prevent negative values
-          await this.reactionModel.deleteOne({ _id: existingReaction._id });
-        } else {
-          // 🔄 If the user changes the reaction, remove the old one and add the new one
-          if (existingReaction.value) {
-            const oldCount = message.reactions.get(existingReaction.value) || 0;
-            message.reactions.set(existingReaction.value, Math.max(oldCount - 1, 0)); // Prevent negative values
-          }
-          const newCount = message.reactions.get(reactionType) || 0;
-          message.reactions.set(reactionType, newCount + 1);
-          existingReaction.value = reactionType;
-          await existingReaction.save();
-        }
-      } else {
-        // ➕ New reaction
-        const newCount = message.reactions.get(reactionType) || 0;
-        message.reactions.set(reactionType, newCount + 1);
-  
-        console.log("Message After Reaction:", message);
-  
-        const reaction = new this.reactionModel({
-          messageId,
-          userId,
-          value: reactionType, // Ensure it's stored as a string
-        });
-  
-        await Promise.all([reaction.save(), message.save()]);
-      }
-  
-      // ✅ Ensure all values in `message.reactions` are numbers
-      message.reactions.forEach((value, key) => {
-        if (typeof value !== "number") {
-          console.warn(`Invalid value in reactions for key: ${key}, resetting to 0`);
-          message.reactions.set(key, 0);
-        }
-      });
-  
-      // ✅ Convert `Map` to a plain object before saving
-      message.reactions = new Map(Object.entries(Object.fromEntries(message.reactions)));
-  
-      // Save the updated message
-      await message.save();
-  
-      // Emit updated reaction data
-      let room = message.groupId
-        ? message.groupId.toString()
-        : message.conversationId.toString();
-  
-      socket.to(room).emit('messageReactionUpdated', {
-        messageId: data.messageId,
-        reactions: Object.fromEntries(message.reactions), // Convert Map to JSON
-      });
-  
-      socket.emit('messageReactionUpdated', {
-        messageId: data.messageId,
-        reactions: Object.fromEntries(message.reactions), // Convert Map to JSON
-      });
-  
-    } catch (error) {
-      console.error('Error handling message reaction:', error.message);
-      socket.emit('error', { message: 'Failed to react to message.' });
-    }
-  }
-  
-  
-  
 }

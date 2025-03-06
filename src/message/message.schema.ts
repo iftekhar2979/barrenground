@@ -77,7 +77,7 @@ export class Message extends Document {
   @Prop({ default: false })
   isDeleted: boolean;
 }
-export const MessageSchema = SchemaFactory.createForClass(Message);
+
 @Schema({ timestamps: true })
 export class PollVote extends Document {
   @Prop({ type: Types.ObjectId, ref: 'Message', required: true })
@@ -89,36 +89,8 @@ export class PollVote extends Document {
   @Prop({ required: true })
   optionIndex: number;
 }
-export class Reaction extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'Message', required: true })
-  messageId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  userId: Types.ObjectId;
 
-  @Prop({type:String, required: true ,})
-  value: string;
-}
-
-@Schema({ timestamps: true })
-export class MessageSeen extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'Message', required: true, index: true })
-  messageId: Types.ObjectId;
-
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
-  userId: Types.ObjectId;
-
-  @Prop({ required: true })
-  name: string;
-
-  @Prop({ required: true })
-  image: string;
-
-  @Prop({ type: Date, default: Date.now })
-  seenAt: Date;
-}
-
-export const MessageSeenSchema = SchemaFactory.createForClass(MessageSeen);
-
+export const MessageSchema = SchemaFactory.createForClass(Message);
 export const PollVoteSchema = SchemaFactory.createForClass(PollVote);
-export const ReactionSchema = SchemaFactory.createForClass(Reaction);
+

@@ -11,10 +11,7 @@ import {
   import { Roles } from 'src/common/custom-decorator/role.decorator';
   import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
   import { RolesGuard } from 'src/auth/guard/role-gurad';
-//   import { ReportDto } from './dto/report.dto';
-  import { pagination } from 'src/common/pagination/pagination';
   import { PaginationOptions } from 'src/common/dto/pagination.dto';
-import { ReportDto } from './dto/report.dto';
   
   @Controller('report')
   export class ReportController {
@@ -22,7 +19,7 @@ import { ReportDto } from './dto/report.dto';
   
     @Post('')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    createReport(@Request() req, @Body() reportDto: ReportDto) {
+    createReport(@Request() req, @Body() reportDto: any) {
       let id = req.user.id;
       return this.reportService.createReport({ ...reportDto, reportedBy: id });
     }

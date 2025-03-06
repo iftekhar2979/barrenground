@@ -113,5 +113,14 @@ export class MessageController {
     }
     return await this.messageService.createPoll(req.user.id,conversationID,question,options)
   }
+  @Get('/reactions/:messageId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  async getReactions(
+    @Request() req,
+    @Param("messageId") messageId:string
+  ) {
+    return await this.messageService.getReactionsForMessage(messageId)
+  }
 
 }

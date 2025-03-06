@@ -2,6 +2,7 @@
 // import { pipeline } from 'stream';
 import {
   BadRequestException,
+  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -19,6 +20,7 @@ import { SocketService } from 'src/socket/socket.service';
 import { Conversation } from 'src/chat/chat.schema';
 import { Group } from 'src/conversation/conversation.schema';
 import { GroupMember } from 'src/group-participant/group-participant.schema';
+import { Reaction } from './schema/reaction.schema';
 // import { pipeline } from 'node:stream';
 
 @Injectable()
@@ -30,6 +32,8 @@ export class MessageService {
     private readonly conversationModel: Model<Conversation>,
     @InjectModel(GroupMember.name)
     private readonly groupMemberModel: Model<GroupMember>,
+    @InjectModel(Reaction.name)
+    private readonly reactionModel: Model<Reaction>,
     private readonly socketService: SocketService,
   ) {}
   create(createMessageDto: CreateMessageDto) {
@@ -102,6 +106,32 @@ export class MessageService {
           as: 'senderInfo', // Alias for the lookup result (an array)
           pipeline: [
             {
+              $project: {
+                name: 1,
+                profilePicture: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: 'messageseens', // Collection where sender info is stored
+          localField: '_id', // Field in the current collection that references the sender
+          foreignField: 'messageId', // The _id field of the "users" collection
+          as: 'seen', // Alias for the lookup result (an array)
+          pipeline: [
+            {
+              $limit: 10,
+            },
+            {
+              $sort: {
+                createdAt: -1,
+              },
+            },
+            {
+              // $limit:10,
+
               $project: {
                 name: 1,
                 profilePicture: 1,
@@ -188,12 +218,12 @@ export class MessageService {
         groupId.toString(),
         userID.toString(),
       );
-      console.log(userExist)
+      console.log(userExist);
       if (!userExist) {
         // this.socketService
         //   .getSocketByUserId(userID)
         //   .emit('error', 'User Is Not From This Group');
-          throw new BadRequestException('User Is Not From This Group');
+        throw new BadRequestException('User Is Not From This Group');
       }
     } else {
       let userExist = await this.isSenderMember(groupId, userId);
@@ -201,7 +231,7 @@ export class MessageService {
         // this.socketService
         //   .getSocketByUserId(userID)
         //   .emit('error', 'User Is Not From This Group');
-          throw new BadRequestException('User Is Not From This Group');
+        throw new BadRequestException('User Is Not From This Group');
       }
       msgBody.groupId = null;
     }
@@ -238,53 +268,56 @@ export class MessageService {
         .getSocketByUserId(userID)
         .to(conversationID)
         .emit(`conversation-${conversationID}`, msgBody);
-        this.socketService
-          .getSocketByUserId(userID)
-          .emit(`conversation-${conversationID}`, msgBody);
+      this.socketService
+        .getSocketByUserId(userID)
+        .emit(`conversation-${conversationID}`, msgBody);
     }
     let message = await this.messageModel.create(msgBody);
 
     return { message: 'File sent successfully', data: message };
   }
-async createPoll(  userID: string,
-  conversationID: string,
-  question:string,
-  options:  { optionText: string; votes?: number }[]
-){
-  let userExist = await this.checkMyRole(
-    conversationID.toString(),
-    userID.toString(),
-  );
-  if (!userExist) {
-    // this.socketService
-    //   .getSocketByUserId(userID)
-    //   .emit('error', 'User Is Not From This Group');
-    throw new BadRequestException('User Is Not From This Group');
-  }
-  let msgBody :CreateMessageDto= {
-    groupId: new mongoose.Types.ObjectId(conversationID) as unknown as ObjectId,
-    conversationId:null,
-    sender:  new mongoose.Types.ObjectId(userID) as unknown as ObjectId,
-    poll: {
-      question:question,
-      options
-    },
-    type: "poll"
-  };
-  let msg = await this.messageModel.create(msgBody);
-  if (this.socketService.getSocketByUserId(userID)) {
-    this.socketService.getSocketByUserId(userID).join(conversationID);
-    this.socketService
-      .getSocketByUserId(userID)
-      .to(conversationID)
-      .emit(`conversation-${conversationID}`, msg);
+  async createPoll(
+    userID: string,
+    conversationID: string,
+    question: string,
+    options: { optionText: string; votes?: number }[],
+  ) {
+    let userExist = await this.checkMyRole(
+      conversationID.toString(),
+      userID.toString(),
+    );
+    if (!userExist) {
+      // this.socketService
+      //   .getSocketByUserId(userID)
+      //   .emit('error', 'User Is Not From This Group');
+      throw new BadRequestException('User Is Not From This Group');
+    }
+    let msgBody: CreateMessageDto = {
+      groupId: new mongoose.Types.ObjectId(
+        conversationID,
+      ) as unknown as ObjectId,
+      conversationId: null,
+      sender: new mongoose.Types.ObjectId(userID) as unknown as ObjectId,
+      poll: {
+        question: question,
+        options,
+      },
+      type: 'poll',
+    };
+    let msg = await this.messageModel.create(msgBody);
+    if (this.socketService.getSocketByUserId(userID)) {
+      this.socketService.getSocketByUserId(userID).join(conversationID);
+      this.socketService
+        .getSocketByUserId(userID)
+        .to(conversationID)
+        .emit(`conversation-${conversationID}`, msg);
       this.socketService
         .getSocketByUserId(userID)
         .emit(`conversation-${conversationID}`, msg);
+    }
+
+    return msg;
   }
-   
-   return msg
-}
   checkMyRole(groupId: string, userId: string) {
     return this.groupMemberModel.findOne({
       groupId: new mongoose.Types.ObjectId(groupId),
@@ -309,6 +342,16 @@ async createPoll(  userID: string,
 
     return true;
   }
-
-  
+  async getReactionsForMessage(messageId: string): Promise<Reaction[]> {
+    const message = await this.messageModel.findById(messageId);
+    if (!message) {
+      throw new HttpException('Message not found', 404);
+    }
+    return await this.reactionModel
+      .find(
+        { messageId: new mongoose.Types.ObjectId(messageId) },
+        { createdAt: 0, updatedAt: 0, _id: 0, __v: 0 },
+      )
+      .populate('userId', 'name email profilePicture');
+  }
 }

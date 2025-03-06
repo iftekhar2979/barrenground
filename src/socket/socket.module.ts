@@ -3,7 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MessageModule } from './../message/message.module';
 import { SocketService } from './socket.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Message, MessageSchema, MessageSeen, MessageSeenSchema, PollVote, PollVoteSchema, Reaction, ReactionSchema } from 'src/message/message.schema';
+import { Message, MessageSchema, PollVote, PollVoteSchema,  } from 'src/message/message.schema';
 import { ConversationModule } from 'src/conversation/conversation.module';
 import { Group, GroupSchema } from 'src/conversation/conversation.schema';
 import { UsersModule } from 'src/users/users.module';
@@ -17,6 +17,8 @@ import {
   GroupMemberSchema,
 } from 'src/group-participant/group-participant.schema';
 import { MessageService } from './socket.seen.service';
+import { MessageSeen, MessageSeenSchema } from 'src/message/schema/seen.schema';
+import { Reaction, ReactionSchema } from 'src/message/schema/reaction.schema';
 // import { SocketGateway } from './socket.gateway';
 @Module({
   imports: [
@@ -29,9 +31,11 @@ import { MessageService } from './socket.seen.service';
         name: PollVote.name,
         schema: PollVoteSchema,
       },
+     
+      {name:MessageSeen.name,schema:MessageSeenSchema},
       {
         name:Reaction.name,schema:ReactionSchema
-      },{name:MessageSeen.name,schema:MessageSeenSchema}
+      },
     ]),
     JwtModule.register({
       secret: 'yourSecretKey',
