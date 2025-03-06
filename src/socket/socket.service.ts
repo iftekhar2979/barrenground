@@ -15,6 +15,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Group } from 'src/conversation/conversation.schema';
 import { GroupMember } from 'src/group-participant/group-participant.schema';
 import { MessageService } from './socket.seen.service';
+import { UserService } from 'src/users/users.service';
 
 @Injectable()
 export class SocketService {
@@ -39,6 +40,7 @@ export class SocketService {
     @InjectModel(PollVote.name)
     private readonly pollVoteModel: Model<PollVote>,
     private readonly messageService: MessageService,
+    private readonly userService:UserService
   ) {}
   afterInit(server: Server) {
     console.log('Socket server initialized');
@@ -91,6 +93,7 @@ export class SocketService {
           groupId: string;
           sender: string;
         }) => {
+          console.log("SEEN",sender,messageId)
           if (sender === payload.id) {
             console.error("Same Sender With Message")
             return;
@@ -134,12 +137,16 @@ export class SocketService {
 
       socket.on(
         'reaction',
-        (data: { messageId: string; reactionType: string }) => {
+        (data: { messageId: string; reactionType: string ;sender:string;}) => {
+          if(data.sender===payload.id){
+            console.log("Can't Add Reaction On Your message")
+            return
+          }
           this.messageService.handleReaction(payload, data, socket);
         },
       );
       socket.on('disconnect', () => {
-        // console.log(this.connectedUsers)
+        this.userService.updateUserDateAndTime(payload.id)
         socket.broadcast.emit(`active-users`, {
           message: `${payload.name} is offline .`,
           isActive: false,

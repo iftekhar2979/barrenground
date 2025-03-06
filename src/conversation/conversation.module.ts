@@ -13,12 +13,20 @@ import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
 import { GroupParticipantModule } from 'src/group-participant/group-participant.module';
 import { NotificationModule } from 'src/notification/notification.module';
+import { Conversation, ConversationSchema } from 'src/chat/chat.schema';
+import { User, UserSchema } from 'src/users/users.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Group.name, schema: GroupSchema },
       { name: GroupMember.name, schema: GroupMemberSchema },
+      {
+        name:Conversation.name, schema:ConversationSchema
+      },
+      {
+        name:User.name, schema:UserSchema
+      }
     ]),
     JwtModule.register({
       secret: 'yourSecretKey', // You should move this to a config file or env variables

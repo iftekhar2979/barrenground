@@ -11,9 +11,11 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Http2ServerRequest } from 'http2';
 import mongoose, { Model, Types, ObjectId } from 'mongoose';
 import { ResponseInterface } from 'src/auth/interface/ResponseInterface';
+import { Conversation } from 'src/chat/chat.schema';
 import { pagination } from 'src/common/pagination/pagination';
 import { GroupService } from 'src/group-participant/group-participant.service';
 import { NotificationService } from 'src/notification/notification.service';
+import { User } from 'src/users/users.schema';
 // import { pipeline, pipeline } from 'stream';
 
 console.log('I just changed the values now .');
@@ -21,6 +23,10 @@ console.log('I just changed the values now .');
 export class ConversationService {
   constructor(
     @InjectModel(Group.name) private readonly groupModel: Model<Group>,
+    @InjectModel(Conversation.name)
+    private readonly conversationModel: Model<Conversation>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<User>,
     @InjectModel(GroupMember.name)
     private readonly groupMemberModel: Model<GroupMember>,
     private readonly groupService: GroupService,
@@ -229,7 +235,7 @@ export class ConversationService {
         },
       },
     ]);
-    return group
+    return group;
   }
 
   async getGroupParticipants(groupId: string, page: number, limit: number) {
@@ -506,6 +512,113 @@ export class ConversationService {
     return {
       message: 'Leave Successfully',
       data: { groupId, userId },
+    };
+  }
+
+  async getUsers({
+    groupId,
+    userId,
+    page = 1,
+    limit = 10,
+  }: {
+    groupId?: string;
+    userId?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    let groupUsers = await this.groupMemberModel
+      .aggregate([
+        {
+          $match: {
+            groupId: new mongoose.Types.ObjectId(groupId),
+            userId: { $ne: new mongoose.Types.ObjectId(userId) }, // Exclude current user
+          },
+        },
+        {
+          $project: { _id: 1, name: 1 }, // Only the _id field (userId)
+        },
+      ])
+      .exec();
+
+    const friends: any = await this.conversationModel
+      .aggregate([
+        {
+          $match: {
+            participants: { $in: [new mongoose.Types.ObjectId(userId)] },
+          },
+        },
+        {
+          $project: { participants: 1 }, // Only project participants
+        },
+      ])
+      .exec();
+    const friendsList = friends
+      .flatMap((conversation) =>
+        conversation.participants.map((participant: any) =>
+          participant.toString(),
+        ),
+      )
+      .filter((friend) => friend !== userId);
+    const friendsNotInGroup = friendsList.filter(
+      (friend) => !groupUsers.includes(friend),
+    );
+    const totalFriends = friendsList.length;
+    const skip = (page - 1) * limit;
+    const friendDetails = await this.userModel
+      .find({ _id: { $in: friendsNotInGroup } }) // Fetch users based on the friend IDs
+      .select('name email profilePicture')
+      .skip(skip)
+      .limit(limit) // Only select the required fields
+      .exec();
+
+      return {
+        message: 'Users Retrived',
+        data: friendDetails,
+        pagination: pagination(limit, page, totalFriends),
+      }; // Return friends with their details
+  }
+  async getMyFriends({
+    userId,
+    page = 1,
+    limit = 10,
+  }: {
+    userId?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const friends: any = await this.conversationModel
+      .aggregate([
+        {
+          $match: {
+            participants: { $in: [new mongoose.Types.ObjectId(userId)] },
+          },
+        },
+        {
+          $project: { participants: 1 },
+        },
+      ])
+      .exec();
+
+    const friendsList = friends.flatMap((conversation) =>
+      conversation.participants.map((participant: any) =>
+        participant.toString(),
+      ),
+    );
+
+    const skip = (page - 1) * limit;
+    const totalFriends = friendsList.length;
+    const friendsDetails = await this.userModel
+      .find({ _id: { $in: friendsList } })
+      .select('name email profilePicture')
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    // Return paginated results
+    return {
+      message: 'Users Retrived',
+      data: friendsDetails,
+      pagination: pagination(limit, page, totalFriends),
     };
   }
 }

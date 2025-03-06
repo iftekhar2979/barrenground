@@ -31,6 +31,36 @@ import { memoryStorage } from 'multer';
 export class ConversationController {
   constructor(private readonly groupService: ConversationService) {}
 
+  @Get('/users')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  getUsers(
+    @Request() req,
+    @Query('groupId') groupId: string,
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+  ) {
+    return this.groupService.getUsers({
+      groupId,
+      userId: req.user.id,
+      page: parseFloat(page),
+      limit: parseFloat(limit),
+    });
+  }
+  @Get('/friends')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  getMyFriends(
+    @Request() req,
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+  ) {
+    return this.groupService.getMyFriends({
+      userId: req.user.id,
+      page: parseFloat(page),
+      limit: parseFloat(limit),
+    });
+  }
   @Post('/')
   @UseInterceptors(FileInterceptor('avatar', multerConfig)) // Ensure this is at the top
   @UseGuards(JwtAuthGuard, RolesGuard)
