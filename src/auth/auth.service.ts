@@ -298,10 +298,11 @@ export class AuthService {
     if (!userInfo) {
       throw new NotFoundException('User not Found!');
     }
-    let isMatch = await comparePassword(
+    let isMatch = await comparePasswordWithArgon(
       resetPasswordDto.oldPassword,
       userInfo.password,
     );
+    // console.log(userInfo.password)
     if (!isMatch) {
       throw new BadRequestException('Password Not Matched!');
     }

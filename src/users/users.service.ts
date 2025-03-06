@@ -148,32 +148,6 @@ export class UserService {
     return this.userModel.findByIdAndDelete(id).exec();
   }
   async uploadProfilePicture(user: User, file: FileType): Promise<any> {
-    console.time('Compressing Image');
-    // fs.readFile(file.path)
-    //   .then(async (data) => {
-    //     console.log("Data",data)
-    //     const resizedBuffer = await resizeImage(data, 800, 600);
-
-    //     const tempPath = path.join(
-    //       __dirname,
-    //       '..',
-    //       '..',
-    //       'public',
-    //       'uploads',
-    //       file.filename,
-    //     );
-
-    //     await fs.writeFile(tempPath, resizedBuffer); // Use async write
-    //     await fs.readFile(tempPath); // Use async read
-
-    //     // Further processing here...
-    //   })
-    //   .catch((err) => {
-    //     throw new Error('Error reading or writing file buffer: ' + err.message);
-    //   });
-    // console.log()
-    console.log(`${file.destination.split('/')[1]}/${file.filename}`);
-    console.timeEnd('Compressing Image');
     await this.updateProfilePicture(
       user.id,
       `${file.destination.split('/')[1]}/${file.filename}`,
@@ -215,5 +189,8 @@ export class UserService {
   }
   async findByEmail(email: string): Promise<User | null> {
     return this.userModel.findOne({ email }).exec();
+  }
+  async updateUserDateAndTime(id: string): Promise<User | null> {
+    return this.userModel.findByIdAndUpdate(id,{updatedAt:new Date()}).exec();
   }
 }
