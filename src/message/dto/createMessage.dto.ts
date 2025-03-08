@@ -28,7 +28,7 @@ export class CreateMessageDto {
   content?: string;
   @IsOptional()
   @IsString()
-  type?: 'text'|'image'|'video' |'poll';
+  type?: string;
   @IsOptional()
   poll?: {
     question: string;

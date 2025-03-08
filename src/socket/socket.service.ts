@@ -40,7 +40,7 @@ export class SocketService {
     @InjectModel(PollVote.name)
     private readonly pollVoteModel: Model<PollVote>,
     private readonly messageService: MessageService,
-    private readonly userService:UserService
+    private readonly userService: UserService,
   ) {}
   afterInit(server: Server) {
     console.log('Socket server initialized');
@@ -93,9 +93,9 @@ export class SocketService {
           groupId: string;
           sender: string;
         }) => {
-          console.log("SEEN",sender,messageId)
+          console.log('SEEN', sender, messageId, groupId);
           if (sender === payload.id) {
-            console.error("Same Sender With Message")
+            console.error('Same Sender With Message');
             return;
           }
           let message = await this.messageService.markAsSeen({
@@ -137,16 +137,16 @@ export class SocketService {
 
       socket.on(
         'reaction',
-        (data: { messageId: string; reactionType: string ;sender:string;}) => {
-          if(data.sender===payload.id){
-            console.log("Can't Add Reaction On Your message")
-            return
+        (data: { messageId: string; reactionType: string; sender: string }) => {
+          if (data.sender === payload.id) {
+            console.log("Can't Add Reaction On Your message");
+            return;
           }
           this.messageService.handleReaction(payload, data, socket);
         },
       );
       socket.on('disconnect', () => {
-        this.userService.updateUserDateAndTime(payload.id)
+        this.userService.updateUserDateAndTime(payload.id);
         socket.broadcast.emit(`active-users`, {
           message: `${payload.name} is offline .`,
           isActive: false,
@@ -233,17 +233,17 @@ export class SocketService {
       socket.join(room);
       let vals = this.connectedUsers.get(payload.id);
       let event = `conversation-${data.groupId}`;
+      let msg = (await this.messageModel.create(msgBody)).toObject();
       socket.to(room).emit(event, {
         senderName: vals.name,
         profilePicture: vals.profilePicture,
-        ...msgBody,
+        ...msg,
       });
       socket.emit(event, {
         senderName: vals.name,
         profilePicture: vals.profilePicture,
-        ...msgBody,
+        ...msg,
       });
-      let msg = await this.messageModel.create(msgBody);
       let updatedMessage;
       if (data.messageOn === 'group') {
         updatedMessage = await this.updateLastMessage(

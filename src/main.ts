@@ -8,7 +8,6 @@ import { MongoDuplicateKeyExceptionFilter } from './common/filters/duplicateFilt
 import { UnauthorizedExceptionFilter } from './common/filters/unAuthorizedExectionError';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { SocketService } from './socket/socket.service';
 import { SeederService } from './seed/seedService';
 
 async function bootstrap() {
@@ -23,6 +22,11 @@ async function bootstrap() {
   const seederService = app.get(SeederService);
   await seederService.seedData()
     await seederService.seedAdminUser();
+    app.enableCors({
+      origin:"*",
+      methods:"GET,PUT,POST,PATCH,DELETE",
+    allowedHeaders:"Content-Type, Authorization"
+    })
   app.useGlobalFilters(new MongoDuplicateKeyExceptionFilter());
   app.useGlobalFilters(new ValidationExceptionFilter());
   app.useGlobalFilters(new UnauthorizedExceptionFilter());

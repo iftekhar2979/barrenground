@@ -9,7 +9,9 @@ export class Notification extends Document {
 
   @Prop({ type: String, required: true })
   message: string;
-  @Prop({type:mongoose.Schema.Types.ObjectId,required:false})
+  @Prop({ type: Boolean, default: false })
+  isRead: false;
+  @Prop({ type: mongoose.Schema.Types.ObjectId, required: false })
   notificationFrom: mongoose.Schema.Types.ObjectId;
   @Prop({ type: Date, default: Date.now })
   timestamp: Date;
@@ -25,7 +27,7 @@ export class DetailedNotification extends Document {
   @Prop({ type: String, required: true })
   key: string;
 
-  @Prop({ type: String, required: true,  }) // Example routing types
+  @Prop({ type: String, required: true }) // Example routing types
   routingType: string;
 }
 

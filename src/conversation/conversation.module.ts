@@ -15,6 +15,9 @@ import { GroupParticipantModule } from 'src/group-participant/group-participant.
 import { NotificationModule } from 'src/notification/notification.module';
 import { Conversation, ConversationSchema } from 'src/chat/chat.schema';
 import { User, UserSchema } from 'src/users/users.schema';
+import { MessageModule } from 'src/message/message.module';
+import { Message, MessageSchema } from 'src/message/message.schema';
+import { SocketModule } from 'src/socket/socket.module';
 
 @Module({
   imports: [
@@ -26,6 +29,9 @@ import { User, UserSchema } from 'src/users/users.schema';
       },
       {
         name:User.name, schema:UserSchema
+      },
+      {
+        name:Message.name,schema:MessageSchema
       }
     ]),
     JwtModule.register({
@@ -34,8 +40,8 @@ import { User, UserSchema } from 'src/users/users.schema';
     }),
     UsersModule,
     GroupParticipantModule,
-    NotificationModule
-    // UploadService
+    NotificationModule,
+    SocketModule
   ],
   controllers: [ConversationController],
   providers: [ConversationService],

@@ -39,7 +39,7 @@ export class Message extends Document {
   @Prop({
     type: String,
     default: 'text',
-    enum: ['text', 'image', 'video', 'poll'],
+    enum: ['text', 'image', 'video', 'poll',"added","removed"],
   })
   type: string;
   @Prop({

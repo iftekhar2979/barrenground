@@ -28,7 +28,21 @@ import { ObjectId } from 'mongoose';
 @Controller('chat')
 export class ChatController {
   constructor(private readonly conversationService: ChatService) {}
-
+  @Get('/count')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  countRequestedConversation(
+    @Request() req,
+  ) {
+    try {
+      let userID = req.user.id;
+      return this.conversationService.requestedConversation(
+        userID,
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  }
   @Get('')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
@@ -49,6 +63,7 @@ export class ChatController {
       console.log(error);
     }
   }
+ 
   @Get('find')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')

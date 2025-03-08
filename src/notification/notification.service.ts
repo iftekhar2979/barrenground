@@ -8,6 +8,7 @@ import {
   CreateDetailedNotificationOnly,
 } from './dto/notification.dto';
 import { pagination } from 'src/common/pagination/pagination';
+import { Types } from 'aws-sdk/clients/acm';
 
 @Injectable()
 export class NotificationService {
@@ -151,7 +152,18 @@ export class NotificationService {
       throw new Error(error.message);
     }
   }
+  async createNotificationsBulk(notifications: { userID: ObjectId; message: string; key: ObjectId; routingType: string }[]) {
+    if (!notifications.length) return { message: 'No notifications to create', data: [] };
 
+    try {
+      // Bulk insert notifications
+      const createdNotifications = await this.notificationModel.insertMany(notifications);
+      return { message: 'Notifications created successfully', data: createdNotifications };
+    } catch (error) {
+      console.error('Error inserting notifications:', error);
+      throw new Error('Failed to create notifications');
+    }
+  }
   async batchUpdateNotificationsBulk(
     userIds: ObjectId[], // Array of userIds
     updateDto: {

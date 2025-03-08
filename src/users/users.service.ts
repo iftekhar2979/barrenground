@@ -42,17 +42,27 @@ export class UserService {
   }
   // Get all users
 
-  async findAll(query): Promise<{ data: User[]; pagination: Pagination }> {
+  async findAll(query: {
+    term: string;
+    page: string;
+    limit: string;
+  }): Promise<{ data: User[]; pagination: Pagination }> {
     let page = parseFloat(query.page);
     let limit = parseFloat(query.limit);
     const skip = (page - 1) * limit;
     const data = await this.userModel
-      .find()
+      .find({
+        name: { $regex: new RegExp(query.term, 'i') },
+      })
       .select('-password')
       .skip(skip)
       .limit(limit)
       .exec();
-    const total = await this.userModel.countDocuments().exec();
+    const total = await this.userModel
+      .countDocuments({
+        name: { $regex: new RegExp(query.term, 'i') },
+      })
+      .exec();
     return { data, pagination: pagination(limit, page, total) };
   }
 
@@ -155,8 +165,12 @@ export class UserService {
     return { message: 'Profile Picture Uploaded Successfully', data: {} };
   }
 
-  async updateMe(user, file: FileType, name: string): Promise<ResponseInterface<{}>> {
-    if(!file){
+  async updateMe(
+    user,
+    file: FileType,
+    name: string,
+  ): Promise<ResponseInterface<{}>> {
+    if (!file) {
       await Promise.all([
         this.profileModel.findOneAndUpdate(
           { userID: user.id },
@@ -190,7 +204,12 @@ export class UserService {
   async findByEmail(email: string): Promise<User | null> {
     return this.userModel.findOne({ email }).exec();
   }
+  totalAccount() {
+    return this.userModel.countDocuments({ isDeleted: false });
+  }
   async updateUserDateAndTime(id: string): Promise<User | null> {
-    return this.userModel.findByIdAndUpdate(id,{updatedAt:new Date()}).exec();
+    return this.userModel
+      .findByIdAndUpdate(id, { updatedAt: new Date() })
+      .exec();
   }
 }

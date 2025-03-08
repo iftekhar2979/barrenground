@@ -89,8 +89,6 @@ export class MessageService {
     } else {
       queryObj.conversationId = query.conversationId;
     }
-
-    // let skip = ((query.page || 1) -1)* query.limit || 10
     const pipeline = [
       {
         $match: {
@@ -100,10 +98,10 @@ export class MessageService {
       },
       {
         $lookup: {
-          from: 'users', // Collection where sender info is stored
-          localField: 'sender', // Field in the current collection that references the sender
-          foreignField: '_id', // The _id field of the "users" collection
-          as: 'senderInfo', // Alias for the lookup result (an array)
+          from: 'users', 
+          localField: 'sender', 
+          foreignField: '_id', 
+          as: 'senderInfo', 
           pipeline: [
             {
               $project: {
@@ -116,10 +114,10 @@ export class MessageService {
       },
       {
         $lookup: {
-          from: 'messageseens', // Collection where sender info is stored
-          localField: '_id', // Field in the current collection that references the sender
-          foreignField: 'messageId', // The _id field of the "users" collection
-          as: 'seen', // Alias for the lookup result (an array)
+          from: 'messageseens', 
+          localField: '_id', 
+          foreignField: 'messageId', 
+          as: 'seen', 
           pipeline: [
             {
               $limit: 10,
@@ -130,11 +128,9 @@ export class MessageService {
               },
             },
             {
-              // $limit:10,
-
               $project: {
                 name: 1,
-                profilePicture: 1,
+                image: 1,
               },
             },
           ],
@@ -161,19 +157,14 @@ export class MessageService {
         },
       },
     ];
-
     const count_pipeline = {
       isDeleted: false,
       ...queryObj,
     };
-
-    console.log(pipeline[0]);
     const [messages, count] = await Promise.all([
       this.messageModel.aggregate(pipeline as any),
       this.messageModel.countDocuments(count_pipeline),
     ]);
-    // console.log("===>",messages);
-
     return {
       message: 'Message Retrived Successfully',
       data: messages,
