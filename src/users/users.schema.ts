@@ -39,12 +39,8 @@ export const UserSchema = SchemaFactory.createForClass(User);
 // Pre-save hook to hash the password before saving
 UserSchema.pre('save', async function (next) {
   if (this.isModified('password')) {
-    console.time('Password Hashed');
-
     try {
-      // Hash the password using Argon2
       this.password = await argon2.hash(this.password);
-      console.timeEnd('Password Hashed');
     } catch (error) {
       console.error('Error hashing password:', error);
       next(error); // If hashing fails, propagate the error

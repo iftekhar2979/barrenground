@@ -41,7 +41,7 @@ export class UserController {
   @Get('/all')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  async findAll(@Query() query: { limit: number; page: number }) {
+  async findAll(@Query() query: { term:string,limit: string; page: string }) {
     try {
       return this.userService.findAll(query);
     } catch (error) {

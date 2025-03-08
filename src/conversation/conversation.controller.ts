@@ -31,6 +31,19 @@ import { memoryStorage } from 'multer';
 export class ConversationController {
   constructor(private readonly groupService: ConversationService) {}
 
+  @Get('/chart')
+  async getAnalyticsWithChart(
+    @Query('limit') limit: string,
+    @Query('year') year: string,
+    @Query('page') page: string,
+  ): Promise<any> {
+    if (!limit && !page) {
+      limit = '10';
+      page = '1';
+    }
+    return await this.groupService.getAllGroupsAndUsers({
+      year:parseFloat(year) || new Date().getFullYear()});
+  }
   @Get('/users')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
@@ -47,6 +60,7 @@ export class ConversationController {
       limit: parseFloat(limit),
     });
   }
+
   @Get('/friends')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
@@ -120,6 +134,7 @@ export class ConversationController {
         groupId,
         body.userId,
         req.user.id,
+        req.user.name
       );
     } catch (error) {
       throw new BadRequestException(error.message);
@@ -169,7 +184,7 @@ export class ConversationController {
 
   @Get('')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('user')
+  @Roles('user', 'admin')
   async getAllConversation(
     @Request() req,
     @Query('page') page: number = 1,
@@ -222,6 +237,7 @@ export class ConversationController {
       groupId,
       userId,
       removedBy,
+      req.user.name
     );
   }
 
@@ -240,7 +256,6 @@ export class ConversationController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
   joinGroup(@Request() req, @Param('groupId') groupId: string) {
-    // const
     return this.groupService.joinPublicGroup(groupId, req.user.id);
   }
   @Post('/group/:groupId/leave')
@@ -254,11 +269,5 @@ export class ConversationController {
     // const
     return this.groupService.leaveGroup(groupId, req.user.id);
   }
-  // async promote(
-  //   @Request() req,
-  //   @Param('groupId') groupId: string,
-  //   @Param('userId') userId: string,
-  // ) {
-  //   return this.groupService.promoteUserToAdmin(groupId, userId, req.user.id)
-  // }
+  
 }

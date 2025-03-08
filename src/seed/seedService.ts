@@ -19,9 +19,9 @@ export class SeederService {
   ) {}
 
   async seedAdminUser() {
-    const adminEmail = 'admin.sharon@vibely.com'; // Use a valid email
+    const adminEmail = 'admin.lira@qping.com'; // Use a valid email
     const existingAdmin = await this.userService.findByEmail(adminEmail);
-
+console.log(existingAdmin)
     // let date = new Date();
     if (!existingAdmin) {
         const adminDto = {
@@ -30,8 +30,10 @@ export class SeederService {
           role: 'admin', // Adjust if you have roles set up
           name: 'Lira',
           profilePicture: 'uploads/girl.png',
+          phone:"+8801837352978",
+          isEmailVerified:true
         };
-
+        await this.userService.create(adminDto)
       // await this.userService.create(adminDto); // Assuming create method is in your UserService
       console.log('Admin user created successfully!');
     } else {

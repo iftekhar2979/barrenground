@@ -30,13 +30,12 @@ export class MessageService {
     name: string;
     image: string;
   }):Promise<{alreadySeen:boolean}> {
-    let seen = await this.seenModel.findOne({ messageId });
+    let seen = await this.seenModel.findOne({ messageId ,userId});
     if(seen){
       return {alreadySeen:true}
     }
       seen = new this.seenModel({ messageId, userId, name, image });
-      seen.save();
-    
+     await seen.save();
     return {alreadySeen:false}
   }
 

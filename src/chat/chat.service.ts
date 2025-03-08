@@ -218,7 +218,7 @@ export class ChatService {
           messageType: '$lastMessage.messageType',
           isActive: '$userActiveStatus.isActive',
           lastActive: '$userActiveStatus.updatedAt',
-          updatedAt:1
+          updatedAt: 1,
         },
       },
       { $skip: skip },
@@ -300,8 +300,6 @@ export class ChatService {
       //   },
       // };
     }
-    console.log(pipeline[0]);
-    // let conversations = await this.cacheManager.get(`conversations-${userId}`);
     let totalConversations =
       await this.conversationModel.countDocuments(count_pipline);
 
@@ -314,6 +312,15 @@ export class ChatService {
       data: conversations,
       pagination: pagination(limit, page, totalConversations),
     };
+  }
+  async requestedConversation(userId: string) {
+    let totalConversations = await this.conversationModel.countDocuments({
+      participants: new mongoID(userId),
+      deletedBy: { $nin: [new mongoID(userId)] },
+      requestedBy: { $ne: new mongoID(userId) },
+      isAccepted: false,
+    });
+    return { requests: totalConversations };
   }
 
   // 3. Delete a conversation (soft delete or hard delete)
@@ -357,7 +364,7 @@ export class ChatService {
   ) {
     try {
       let skip = (page - 1) * limit;
-      console.log(type)
+      console.log(type);
       let matchQuery: {
         conversationId?: ObjectId;
         groupId?: ObjectId;
@@ -399,7 +406,7 @@ export class ChatService {
           },
         },
       ];
-      console.log(pipeline[0].$match)
+      console.log(pipeline[0].$match);
       let count = [
         {
           $match: {

@@ -8,14 +8,19 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { AbstractWsAdapter } from '@nestjs/websockets';
 import { Http2ServerRequest } from 'http2';
 import mongoose, { Model, Types, ObjectId } from 'mongoose';
 import { ResponseInterface } from 'src/auth/interface/ResponseInterface';
 import { Conversation } from 'src/chat/chat.schema';
 import { pagination } from 'src/common/pagination/pagination';
 import { GroupService } from 'src/group-participant/group-participant.service';
+import { CreateMessageDto } from 'src/message/dto/createMessage.dto';
+import { Message } from 'src/message/message.schema';
 import { NotificationService } from 'src/notification/notification.service';
+import { SocketService } from 'src/socket/socket.service';
 import { User } from 'src/users/users.schema';
+import { UserService } from 'src/users/users.service';
 // import { pipeline, pipeline } from 'stream';
 
 console.log('I just changed the values now .');
@@ -27,10 +32,14 @@ export class ConversationService {
     private readonly conversationModel: Model<Conversation>,
     @InjectModel(User.name)
     private readonly userModel: Model<User>,
+    @InjectModel(Message.name)
+    private readonly messageModel: Model<Message>,
     @InjectModel(GroupMember.name)
     private readonly groupMemberModel: Model<GroupMember>,
     private readonly groupService: GroupService,
     private readonly notificationService: NotificationService,
+    private readonly userService: UserService,
+    private readonly socketService: SocketService,
   ) {}
 
   async checkGroupExist(name: string) {
@@ -132,46 +141,80 @@ export class ConversationService {
     groupId: string,
     userIds: string[],
     addedBy: string,
+    name: string,
   ) {
     const group = await this.groupModel.findById(groupId);
     if (!group) throw new NotFoundException('Group not found');
-    console.log(userIds);
 
-    // Public group: Anyone can join | Private group: Only members can add
+    // Private group: Only members can add users
     if (group.type === 'private') {
-      const member = await this.groupMemberModel.findOne({
-        groupId: new Types.ObjectId(groupId), // Ensure groupId is ObjectId
+      const isMember = await this.groupMemberModel.exists({
+        groupId: new Types.ObjectId(groupId),
         userId: new Types.ObjectId(addedBy),
       });
-      if (!member)
+
+      if (!isMember)
         throw new ForbiddenException(
           'Only members can add users to a private group',
         );
     }
 
-    // Check and add all users
-    const addedMembers = [];
-    for (const userId of userIds) {
-      const existingMember = await this.groupMemberModel.findOne({
-        groupId: new Types.ObjectId(groupId), // Ensure groupId is ObjectId
-        userId: new Types.ObjectId(userId), // Ensure userId is ObjectId
-      });
-      if (existingMember) {
-        throw new ForbiddenException(`An User is already in the group`);
-      }
+    const groupObjectId = new Types.ObjectId(groupId);
+    const userObjectIds = userIds.map((id) => new Types.ObjectId(id));
+    const [existingMembers, userInfos] = await Promise.all([
+      this.groupMemberModel.find({
+        groupId: groupObjectId,
+        userId: { $in: userObjectIds },
+      }),
+      this.userModel.find({ _id: { $in: userObjectIds } }, { name: 1, _id: 1 }),
+    ]);
+    const existingUserIds = new Set(
+      existingMembers.map((member) => member.userId.toString()),
+    );
 
-      // Add user to the group if they aren't already a member
-      const newMember = await this.groupMemberModel.create({
-        groupId: new Types.ObjectId(groupId),
-        userId: new Types.ObjectId(userId),
-        role: 'member',
-      });
+    const newUsers = userObjectIds.filter(
+      (userId) => !existingUserIds.has(userId.toString()),
+    );
 
-      addedMembers.push(newMember);
+    if (newUsers.length === 0) {
+      throw new ForbiddenException('All users are already in the group');
     }
 
+    const membersToInsert = newUsers.map((userId) => ({
+      groupId: groupObjectId,
+      userId,
+      role: 'member',
+    }));
+
+    const [addedMembers] = await Promise.all([
+      this.groupMemberModel.insertMany(membersToInsert),
+    ]);
+    const notifications = newUsers.map((userId) => ({
+      userID: userId as unknown as ObjectId,
+      message: `You have been added to ${group.name} by ${name}`,
+      key: groupObjectId as unknown as mongoose.Schema.Types.ObjectId,
+      routingType: 'group',
+    }));
+    const messagesToInsert = newUsers.map((msg) => ({
+      groupId: groupObjectId as unknown as ObjectId,
+      conversationId: null,
+      sender: new mongoose.Types.ObjectId(addedBy) as unknown as ObjectId,
+      content: `${userInfos.find((item) => item._id.toString() === msg._id.toString()).name} is Added by ${name}`,
+      type: 'added',
+    }));
+    await Promise.all([
+      this.notificationService.createNotificationsBulk(notifications),
+      this.bulkCreateMessages(messagesToInsert),
+    ]);
+    this.socketService
+      .getSocketByUserId(addedBy)
+      .to(groupId)
+      .emit(`conversation-${groupId}`, messagesToInsert);
+    this.socketService
+      .getSocketByUserId(addedBy)
+      .emit(`conversation-${groupId}`, messagesToInsert);
     return {
-      message: 'Members Added Successfully',
+      message: 'Members added successfully',
       data: addedMembers,
     };
   }
@@ -257,6 +300,7 @@ export class ConversationService {
     groupId: string,
     userId: string,
     removedBy: string,
+    name: string,
   ) {
     const group = await this.groupModel.findById(groupId);
     if (!group) throw new NotFoundException('Group not found');
@@ -267,7 +311,7 @@ export class ConversationService {
 
     const targetUser = await this.groupService.checkMyRole(groupId, userId);
     if (!targetUser) throw new NotFoundException('User not found in the group');
-    console.log(targetUser.id, userId);
+    const userInfos = await this.userModel.findById(userId).select('name');
     if (targetUser.id === userId) {
       throw new BadRequestException("You Can't Remove Your Self");
     }
@@ -288,7 +332,30 @@ export class ConversationService {
         { $pull: { admins: userId } },
       );
     }
-
+    this.notificationService.createNotification({
+      userID: new mongoose.Types.ObjectId(userId) as unknown as ObjectId,
+      message: `You are removed by ${name}`,
+      key: new Types.ObjectId(groupId) as unknown as ObjectId,
+      routingType: 'group',
+    });
+    let bulkMessage = [
+      {
+        groupId: new Types.ObjectId(groupId) as unknown as ObjectId,
+        conversationId: null,
+        sender: new Types.ObjectId(userId) as unknown as ObjectId,
+        content: `${userInfos.name} is removed by ${name}`,
+        type: 'removed',
+      },
+    ];
+    this.bulkCreateMessages(bulkMessage);
+    // console.log(this.socketService.getSocketByUserId(removedBy));
+    this.socketService
+      .getSocketByUserId(removedBy)
+      .to(groupId)
+      .emit(`conversation-${groupId}`, bulkMessage);
+    this.socketService
+      .getSocketByUserId(removedBy)
+      .emit(`conversation-${groupId}`, bulkMessage);
     return {
       message: 'User removed from the group',
       data: { groupId, userId },
@@ -338,11 +405,39 @@ export class ConversationService {
       throw new ForbiddenException('User is already in the group');
     }
 
+    const userInfos = await this.userModel.findById(userId).select('name')
+
+    let bulkMessage = [
+      {
+        groupId: new Types.ObjectId(groupId) as unknown as ObjectId,
+        conversationId: null,
+        sender: new Types.ObjectId(userId) as unknown as ObjectId,
+        content: `${userInfos.name} joined to the grounp`,
+        type: 'added',
+      },
+    ];
+  
     await this.groupMemberModel.create({
       groupId,
       userId,
       role: 'member',
     });
+   await this.notificationService.createNotification({
+      userID: new mongoose.Types.ObjectId(userId) as unknown as ObjectId,
+      message: `Joined ${group.name} successfully`,
+      key: new Types.ObjectId(groupId) as unknown as ObjectId,
+      routingType: 'group',
+    });
+ 
+    this.bulkCreateMessages(bulkMessage);
+    // console.log(this.socketService.getSocketByUserId(removedBy));
+    this.socketService
+      .getSocketByUserId(userId)
+      .to(groupId)
+      .emit(`conversation-${groupId}`, bulkMessage);
+    this.socketService
+      .getSocketByUserId(userId)
+      .emit(`conversation-${groupId}`, bulkMessage);
     return {
       message: 'User joined the group successfully',
       data: { groupId, userId },
@@ -369,7 +464,7 @@ export class ConversationService {
       .select('groupId')
       .lean();
     const involvedGroupIds = userGroupIds.map((g) => g.groupId);
-    console.log(involvedGroupIds);
+    // console.log(involvedGroupIds);
     const pipeline: any = [
       {
         $match: {
@@ -441,6 +536,7 @@ export class ConversationService {
           lastActiveAt: '$lastMessage.createdAt',
           totalMember: '$totalMembers.totalMembers',
           updatedAt: 1,
+          createdAt: 1,
         },
       },
       {
@@ -571,12 +667,13 @@ export class ConversationService {
       .limit(limit) // Only select the required fields
       .exec();
 
-      return {
-        message: 'Users Retrived',
-        data: friendDetails,
-        pagination: pagination(limit, page, totalFriends),
-      }; // Return friends with their details
+    return {
+      message: 'Users Retrived',
+      data: friendDetails,
+      pagination: pagination(limit, page, totalFriends),
+    }; // Return friends with their details
   }
+
   async getMyFriends({
     userId,
     page = 1,
@@ -620,5 +717,76 @@ export class ConversationService {
       data: friendsDetails,
       pagination: pagination(limit, page, totalFriends),
     };
+  }
+
+  async getAllGroupsAndUsers({
+    year = 2025,
+  }: {
+    year: number;
+    limit?: number;
+    page?: number;
+  }) {
+    console.log(year);
+    const [totalUsers, totalGroups, analytics] = await Promise.all([
+      this.userService.totalAccount(),
+      this.groupModel.countDocuments(),
+      this.userModel.aggregate([
+        {
+          $match: {
+            createdAt: {
+              $gte: new Date(`${year}-01-01T00:00:00.000Z`),
+              $lte: new Date(`${year}-12-31T23:59:59.999Z`),
+            },
+          },
+        },
+        {
+          $group: {
+            _id: { $month: '$createdAt' },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+    const chart = [
+      { name: 'Jan', count: 0 },
+      { name: 'Feb', count: 0 },
+      { name: 'Mar', count: 0 },
+      { name: 'Apr', count: 0 },
+      { name: 'May', count: 0 },
+      { name: 'Jun', count: 0 },
+      { name: 'Jul', count: 0 },
+      { name: 'Aug', count: 0 },
+      { name: 'Sep', count: 0 },
+      { name: 'Oct', count: 0 },
+      { name: 'Nov', count: 0 },
+      { name: 'Dec', count: 0 },
+    ];
+    analytics.forEach(({ _id, count }) => {
+      chart[_id - 1].count = count;
+    });
+
+    return {
+      message: '',
+      data: {
+        chart: chart,
+        totalGroups,
+        totalUsers,
+      },
+    };
+  }
+  async bulkCreateMessages(messages: CreateMessageDto[]) {
+    if (!messages.length) return { message: 'No messages to create', data: [] };
+    try {
+      // Perform bulk insert
+      const createdMessages = await this.messageModel.insertMany(messages);
+      return {
+        message: 'Messages created successfully',
+        data: createdMessages,
+      };
+    } catch (error) {
+      console.error('Error creating messages:', error);
+      throw new Error('Failed to create messages');
+    }
   }
 }
