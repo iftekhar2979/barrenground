@@ -31,6 +31,8 @@ export class User extends Document {
   profilePicture: string | null;
   @Prop({ default: false })
   isDeleted: boolean;
+  @Prop({ default: null })
+  fcm: string;
 }
 
 // Create the schema and apply pre-save hook outside the class
