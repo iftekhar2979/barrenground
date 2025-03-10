@@ -36,8 +36,7 @@ import { Profile } from 'src/profile/profile.schema';
 export class AuthService {
   constructor(
     @InjectModel(Otp.name) private otpModel: Model<Otp>,
-    @InjectModel(User.name) private userModel: Model<User>, // Injecting the User model
-    // @InjectModel(Profile.name) private profileModel: Model<IProfile>,
+    @InjectModel(User.name) private userModel: Model<User>, 
     private jwtService: JwtService, // Injecting the JwtService for token generation
     private emailService: EmailService,
   ) {}
@@ -139,8 +138,6 @@ export class AuthService {
   }
 
   async find(authDto) {
-    console.log(authDto);
-    
     let user = await this.userModel.findOne({ email: authDto.email });
     if (!user) {
       throw new BadRequestException('User not Found!');
@@ -192,17 +189,20 @@ export class AuthService {
         token: token,
       });
     }
-    console.log(user)
+    if(authDto.fcm){
+     await this.userModel.findByIdAndUpdate(user._id,{fcm:authDto.fcm})
+    }
     const payload = {
       email: user.email,
       id: user._id,
       role: user.role,
       name: user.name,
       tokenFor: 'auth',
-      profilePicture:user.profilePicture
+      profilePicture:user.profilePicture,
+      fcm:authDto.fcm
     };
-    console.log(payload)
     const token = this.jwtService.sign(payload);
+  
     return { message: 'Logged In Successfully', data: user, token };
   }
   async verifyOtp(user: Omit<IUser, 'password'>, code: string) {
@@ -247,7 +247,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         role: user.role,
-        tokenFor: 'email-verification',
+        tokenFor: 'email-verification'
       };
     }
   

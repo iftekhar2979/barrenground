@@ -13,6 +13,8 @@ export class authDto {
   email: string;
   @IsString()
   password: string;
+  @IsOptional()
+  fcm:string;
 }
 
 export class resetPasswordDto {

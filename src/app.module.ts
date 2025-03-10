@@ -20,6 +20,9 @@ import { NotificationModule } from './notification/notification.module';
 import { SettingsModule } from './settings/settings.module';
 import { SeederService } from './seed/seedService';
 import { ReportModule } from './report/report.module';
+import { FirebaseModule } from './firebase/firebase.module';
+import { FirebaseController } from './firebase/firebase.controller';
+import { FirebaseService } from './firebase/firebase.service';
 
 @Module({
   imports:  [
@@ -40,6 +43,7 @@ import { ReportModule } from './report/report.module';
     NotificationModule,
     SettingsModule,
     ReportModule,
+    FirebaseModule,
   ],
   controllers: [AppController],
   providers: [
@@ -49,6 +53,7 @@ import { ReportModule } from './report/report.module';
     },
     AppService,
     SeederService,
+    FirebaseService
   ],
 })
 export class AppModule {}
