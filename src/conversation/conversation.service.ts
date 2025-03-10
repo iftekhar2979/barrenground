@@ -428,9 +428,8 @@ export class ConversationService {
       key: new Types.ObjectId(groupId) as unknown as ObjectId,
       routingType: 'group',
     });
- 
+
     this.bulkCreateMessages(bulkMessage);
-    // console.log(this.socketService.getSocketByUserId(removedBy));
     this.socketService
       .getSocketByUserId(userId)
       .to(groupId)

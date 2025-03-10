@@ -18,19 +18,29 @@ export class ResponseInterceptor implements NestInterceptor {
       map((data) => {
         response.statusCode = data?.statusCode || 200;
         let message = 'Request was successful';
-        if(data?.token){
+        if (data?.token) {
           return {
             ok: true,
-            status:  data?.statusCode || 200 ,
+            status: data?.statusCode || 200,
             message: data?.message ? data?.message : message,
             data: data?.pagination || data.data ? data?.data : data || {},
-            token:data?.token
+            token: data?.token,
           };
         }
-        if(data?.pagination){
+        if (data?.metadata && data?.pagination) {
           return {
             ok: true,
-            status:  data?.statusCode || 200,
+            status: data?.statusCode || 200,
+            message: data?.message ? data?.message : message,
+            data: data.data ? data?.data : data || {},
+            metadata: data?.metadata,
+            pagination: data?.pagination,
+          };
+        }
+        if (data?.pagination) {
+          return {
+            ok: true,
+            status: data?.statusCode || 200,
             message: data?.message ? data?.message : message,
             data: data?.pagination || data.data ? data?.data : data || {},
             pagination: data?.pagination,
@@ -38,10 +48,9 @@ export class ResponseInterceptor implements NestInterceptor {
         }
         return {
           ok: true,
-            status:  data?.statusCode || 200 ,
+          status: data?.statusCode || 200,
           message: data?.message ? data?.message : message,
           data: data?.pagination || data.data ? data?.data : data || {},
-         
         };
       }),
     );
