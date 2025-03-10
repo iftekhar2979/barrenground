@@ -42,6 +42,30 @@ export class EventService {
     limit: number;
   }) {
     const events = await this.eventModel.aggregate([
+      // {
+      //   $lookup:{
+      //     from:
+      //     to:
+      //   }
+      // },
+      {
+        $lookup: {
+          from: "eventinformations",
+          localField: "_id",
+          foreignField: "eventId",
+          as: "involvedUsers"
+        }
+      },
+      {
+        $match:
+          {
+            "involvedUsers.userID": {
+              $not: {
+                $eq: new mongoose.Types.ObjectId(userId)
+              }
+            }
+          }
+      },
       {
         $addFields: {
           isMyEvent: { $eq: ['$userID', new mongoose.Types.ObjectId(userId)] },
@@ -118,9 +142,6 @@ export class EventService {
       eventId: new mongoose.Types.ObjectId(eventId),
       userID: new mongoose.Types.ObjectId(userId),
     });
-
-    console.log(eventInformation);
-    // Validate the eventInformation document before saving
     try {
       await eventInformation.validate(); // Check for validation errors
     } catch (error) {

@@ -32,6 +32,8 @@ export class MessageService {
     private readonly conversationModel: Model<Conversation>,
     @InjectModel(GroupMember.name)
     private readonly groupMemberModel: Model<GroupMember>,
+    @InjectModel(Group.name)
+    private readonly groupModel: Model<Group>,
     @InjectModel(Reaction.name)
     private readonly reactionModel: Model<Reaction>,
     private readonly socketService: SocketService,
@@ -81,11 +83,40 @@ export class MessageService {
     const limit = query.limit || 10;
     const page = query.page || 1;
     const skip = (page - 1) * limit;
+
     let queryObj: { groupId?: ObjectId; conversationId?: ObjectId } = {
       conversationId: query.conversationId,
     };
+    let group=[];
     if (query.groupId) {
       queryObj.groupId = query.groupId;
+      group = await this.groupModel.aggregate([
+        {
+          $match: { _id: query.groupId },
+        },
+        {
+          $lookup: {
+            from: 'groupmembers',
+            let: { groupId: "$_id", userId: query.userId },
+            pipeline: [
+              {
+                $match: { 
+                  $expr: { $and: [ { $eq: ["$groupId", "$$groupId"] }, { $eq: ["$userId", "$$userId"] } ] }
+                }
+              },
+              { $project: { _id: 1 } } // Only check if the user exists
+            ],
+            as: 'userMembership'
+          }
+        },
+        {
+          $addFields: {
+            isMember: { $gt: [{ $size: "$userMembership" }, 0] }
+          }
+        },
+       
+      ]);
+     group = group.length > 0 ? group[0] : null;
     } else {
       queryObj.conversationId = query.conversationId;
     }
@@ -98,10 +129,10 @@ export class MessageService {
       },
       {
         $lookup: {
-          from: 'users', 
-          localField: 'sender', 
-          foreignField: '_id', 
-          as: 'senderInfo', 
+          from: 'users',
+          localField: 'sender',
+          foreignField: '_id',
+          as: 'senderInfo',
           pipeline: [
             {
               $project: {
@@ -114,10 +145,10 @@ export class MessageService {
       },
       {
         $lookup: {
-          from: 'messageseens', 
-          localField: '_id', 
-          foreignField: 'messageId', 
-          as: 'seen', 
+          from: 'messageseens',
+          localField: '_id',
+          foreignField: 'messageId',
+          as: 'seen',
           pipeline: [
             {
               $limit: 10,
@@ -169,6 +200,7 @@ export class MessageService {
       message: 'Message Retrived Successfully',
       data: messages,
       pagination: pagination(limit, page, count),
+      metadata:group
     };
   }
   async sendFileAsMessageWithRest(
