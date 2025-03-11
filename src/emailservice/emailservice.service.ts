@@ -9,6 +9,9 @@ export class EmailService {
   constructor() {
     console.log('email', process.env.SMTP_USERNAME);
     this.transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com', // Default to Gmail SMTP server
+      port: parseInt(process.env.SMTP_PORT || '587', 10), // Default to port 587
+      secure: process.env.SMTP_PORT === '465',
       service: 'gmail', // Or your chosen email service provider
       auth: {
         user: 'salminrashid556@gmail.com', // Your email address
@@ -25,7 +28,7 @@ export class EmailService {
     const mailOptions = {
       from: process.env.SMTP_USERNAME,
       to,
-      subject: 'Vibely OTP for Registration',
+      subject: 'Q-ping OTP for Registration',
       html: htmlTemplate,
     };
     try {
@@ -40,7 +43,7 @@ export class EmailService {
   // Function to generate the HTML template with the OTP embedded
   private getOtpHtmlTemplate(userName: string, otp: string): string {
     return `
-     ${otp} is your Barrelground OTP
+     ${otp} is your Q-ping OTP
     `;
   }
   // private getOtpHtmlTemplate(userName: string, otp: string): string {
