@@ -66,11 +66,11 @@ export const multerConfig = {
     console.time('fileFilter');
     console.log(file.mimetype)
     const allowedMimes = [
-      'image/jpeg', 'image/png', 'image/gif',
+      'image/jpeg', 'image/png', 'image/gif','image/svg+xml',
       'audio/mpeg', 'audio/wav',
       'video/mp4', 'video/webm', 'video/ogg'
     ];
-
+console.log(file)
     if (allowedMimes.includes(file.mimetype)) {
       callback(null, true);
     } else {

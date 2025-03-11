@@ -42,12 +42,6 @@ export class EventService {
     limit: number;
   }) {
     const events = await this.eventModel.aggregate([
-      // {
-      //   $lookup:{
-      //     from:
-      //     to:
-      //   }
-      // },
       {
         $lookup: {
           from: "eventinformations",
