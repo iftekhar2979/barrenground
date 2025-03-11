@@ -8,14 +8,14 @@ export class EmailService {
 
   constructor() {
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com', // Default to Gmail SMTP server
-      port: parseInt(process.env.SMTP_PORT || '465', 10), // Default to port 587
-      secure: process.env.SMTP_PORT === '465',
-      service: 'gmail', // Or your chosen email service provider
+      host: 'smtp.gmail.com', 
+      port: 587, 
+      service: 'gmail', 
       auth: {
         user: 'salminrashid556@gmail.com', // Your email address
         pass: 'qpwe buzr dppt cibl', // Your email password
       },
+      connectionTimeout: 10000, 
     });
   }
 
