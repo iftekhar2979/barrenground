@@ -22,11 +22,11 @@ export class EmailService {
   // Function to send OTP email
   async sendOtpEmail(to: string, otp: string, userName: string) {
     console.log('email', to);
-    console.log('From', process.env.SMTP_USERNAME);
+    // console.log('From', process.env.SMTP_USERNAME);
     const htmlTemplate = this.getOtpHtmlTemplate(userName, otp);
 // console.log(process.env.SMTP)
     const mailOptions = {
-      from: process.env.SMTP_USERNAME,
+      from: "salminrashid556@gmail.com",
       to,
       subject: 'Q-ping OTP for Registration',
       html: htmlTemplate,
