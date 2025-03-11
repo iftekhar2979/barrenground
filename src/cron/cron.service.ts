@@ -13,7 +13,6 @@ export class CronService {
 
   constructor(
     @InjectModel(Event.name) private readonly eventModel: Model<Event>,
-    // @InjectModel(Event.name) private readonly eventModel: Model<Event>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
   ) {
     this.scheduleEventNotifications();
@@ -57,14 +56,10 @@ export class CronService {
         this.logger.log('✅ No upcoming events in the next 24 hours.');
         return;
       }
-      //   const user
-      //   console.log(upcomingEvents);
+
       for (const event of upcomingEvents) {
-        // console.log(event.eventInfo.)
         let users = event.eventInfo.map((item) => item.userID);
         const infos= await this.userModel.find({_id:{$in:users}},{fcm:1,_id:0})
-        console.log('Tokens', infos);
-        // const user = await this.userModel.findById(event.userID);
         if (infos.length===0) {
           this.logger.warn(`⚠️ No valid FCM token for user ${event.userID}`);
           continue;
@@ -76,13 +71,6 @@ export class CronService {
             event.eventDate,
             event.eventTime
         )
-        // Send Notification
-        // await this.sendPushNotification(
-        //   user.fcm,
-        //   event.eventName,
-        //   event.eventDate,
-        //   event.eventTime,
-        // );
     
       }
     });
