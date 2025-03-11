@@ -53,10 +53,6 @@ export class SocketService {
     try {
       const clientId = socket.id;
       const token = socket.handshake.headers.authorization;
-      console.log(
-        `${socket.handshake.headers['user-agent']} Connected`,
-        socket.id,
-      );
       // console.log(socket.handshake.headers)
       if (!token) {
         socket.emit('error', 'You are not authorized to access this resource!');
@@ -66,7 +62,6 @@ export class SocketService {
       }
       const jwt = token.split(' ')[1];
       const payload = this.jwtService.verify(jwt);
-      console.log(this.connectedUsers);
 
       this.connectedUsers.set(payload.id, {
         name: payload.name,
