@@ -7,10 +7,9 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
-    console.log('email', process.env.SMTP_USERNAME);
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com', // Default to Gmail SMTP server
-      port: parseInt(process.env.SMTP_PORT || '587', 10), // Default to port 587
+      port: parseInt(process.env.SMTP_PORT || '465', 10), // Default to port 587
       secure: process.env.SMTP_PORT === '465',
       service: 'gmail', // Or your chosen email service provider
       auth: {
@@ -23,8 +22,9 @@ export class EmailService {
   // Function to send OTP email
   async sendOtpEmail(to: string, otp: string, userName: string) {
     console.log('email', to);
+    console.log('From', process.env.SMTP_USERNAME);
     const htmlTemplate = this.getOtpHtmlTemplate(userName, otp);
-
+// console.log(process.env.SMTP)
     const mailOptions = {
       from: process.env.SMTP_USERNAME,
       to,
