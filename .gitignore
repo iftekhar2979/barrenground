@@ -55,3 +55,9 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Ignore Firebase config & environment variables
+# Ignore Firebase credentials
+src/firebase/firebase.config.json
+.env
+

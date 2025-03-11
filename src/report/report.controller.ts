@@ -23,6 +23,7 @@ import {
       let id = req.user.id;
       return this.reportService.createReport({ ...reportDto, reportedBy: id });
     }
+ 
     @Get('/all')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('admin')

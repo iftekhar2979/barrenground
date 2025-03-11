@@ -23,8 +23,9 @@ export interface IReport extends Document {
 export class Report extends Document {
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
+    required: false,
     ref: 'User',
+    default:null
   })
   userID: mongoose.Schema.Types.ObjectId;
   @Prop({

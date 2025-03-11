@@ -206,13 +206,13 @@ export class ConversationService {
       this.notificationService.createNotificationsBulk(notifications),
       this.bulkCreateMessages(messagesToInsert),
     ]);
-    this.socketService
-      .getSocketByUserId(addedBy)
-      .to(groupId)
-      .emit(`conversation-${groupId}`, messagesToInsert);
-    this.socketService
-      .getSocketByUserId(addedBy)
-      .emit(`conversation-${groupId}`, messagesToInsert);
+    // this.socketService
+    //   .getSocketByUserId(addedBy)
+    //   .to(groupId)
+    //   .emit(`conversation-${groupId}`, messagesToInsert);
+    // this.socketService
+    //   .getSocketByUserId(addedBy)
+    //   .emit(`conversation-${groupId}`, messagesToInsert);
     return {
       message: 'Members added successfully',
       data: addedMembers,
@@ -348,14 +348,17 @@ export class ConversationService {
       },
     ];
     this.bulkCreateMessages(bulkMessage);
-    // console.log(this.socketService.getSocketByUserId(removedBy));
-    this.socketService
-      .getSocketByUserId(removedBy)
-      .to(groupId)
-      .emit(`conversation-${groupId}`, bulkMessage);
-    this.socketService
-      .getSocketByUserId(removedBy)
-      .emit(`conversation-${groupId}`, bulkMessage);
+   
+    //  console.log( this.socketService
+    // .getSocketByUserId(removedBy));
+  
+    // this.socketService
+    //   .getSocketByUserId(removedBy)
+    //   .to(groupId)
+    //   .emit(`conversation-${groupId}`, bulkMessage);
+    // this.socketService
+    //   .getSocketByUserId(removedBy)
+    //   .emit(`conversation-${groupId}`, bulkMessage);
     return {
       message: 'User removed from the group',
       data: { groupId, userId },
@@ -412,7 +415,7 @@ export class ConversationService {
         groupId: new Types.ObjectId(groupId) as unknown as ObjectId,
         conversationId: null,
         sender: new Types.ObjectId(userId) as unknown as ObjectId,
-        content: `${userInfos.name} joined to the grounp`,
+        content: `${userInfos.name} joined to the group`,
         type: 'added',
       },
     ];
@@ -430,13 +433,13 @@ export class ConversationService {
     });
 
     this.bulkCreateMessages(bulkMessage);
-    this.socketService
-      .getSocketByUserId(userId)
-      .to(groupId)
-      .emit(`conversation-${groupId}`, bulkMessage);
-    this.socketService
-      .getSocketByUserId(userId)
-      .emit(`conversation-${groupId}`, bulkMessage);
+    // this.socketService
+    //   .getSocketByUserId(userId)
+    //   .to(groupId)
+    //   .emit(`conversation-${groupId}`, bulkMessage);
+    // this.socketService
+    //   .getSocketByUserId(userId)
+    //   .emit(`conversation-${groupId}`, bulkMessage);
     return {
       message: 'User joined the group successfully',
       data: { groupId, userId },

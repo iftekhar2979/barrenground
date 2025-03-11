@@ -66,7 +66,7 @@ export class SocketService {
       }
       const jwt = token.split(' ')[1];
       const payload = this.jwtService.verify(jwt);
-      console.log(token);
+      console.log(this.connectedUsers);
 
       this.connectedUsers.set(payload.id, {
         name: payload.name,

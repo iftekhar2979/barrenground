@@ -23,6 +23,7 @@ import { ReportModule } from './report/report.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { FirebaseController } from './firebase/firebase.controller';
 import { FirebaseService } from './firebase/firebase.service';
+import { CronModule } from './cron/cron.module';
 
 @Module({
   imports:  [
@@ -44,6 +45,7 @@ import { FirebaseService } from './firebase/firebase.service';
     SettingsModule,
     ReportModule,
     FirebaseModule,
+    CronModule,
   ],
   controllers: [AppController],
   providers: [
