@@ -8,14 +8,18 @@ export class EmailService {
 
   constructor() {
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com', 
-      port: 587, 
+      host: 'smtp.gmail.com',   
+      port: 465,                
+      secure: true,             
       service: 'gmail', 
       auth: {
-        user: 'salminrashid556@gmail.com', // Your email address
-        pass: 'qpwe buzr dppt cibl', // Your email password
+        user: 'salminrashid556@gmail.com',  // Your Gmail address
+        pass: 'qpwe buzr dppt cibl',        // Your app-specific password (if 2FA enabled)
       },
-      connectionTimeout: 10000, 
+      connectionTimeout: 30000,  // Increased connection timeout
+      tls: {
+        rejectUnauthorized: false,  // This allows self-signed certificates (if necessary)
+      },
     });
   }
 
@@ -36,7 +40,8 @@ export class EmailService {
       console.log('OTP Email Sent');
       await this.transporter.sendMail(mailOptions);
     } catch (error) {
-      console.error('Error sending OTP email', error);
+      console.error(error);
+      console.error(error.message);
       throw new BadRequestException('Email is not available!');
     }
   }
