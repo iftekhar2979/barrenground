@@ -31,6 +31,7 @@ export class EmailService {
       subject: 'Q-ping OTP for Registration',
       html: htmlTemplate,
     };
+    console.log("Printed Mail Options",mailOptions)
     try {
       console.log('OTP Email Sent');
       await this.transporter.sendMail(mailOptions);
