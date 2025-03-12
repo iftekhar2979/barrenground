@@ -30,7 +30,7 @@ export class EmailService {
     const htmlTemplate = this.getOtpHtmlTemplate(userName, otp);
 // console.log(process.env.SMTP)
     const mailOptions = {
-      from: "salminrashid556@gmail.com",
+      from: "info@medroofurgentcare.com",
       to,
       subject: 'Q-ping OTP for Registration',
       html: htmlTemplate,
@@ -38,7 +38,16 @@ export class EmailService {
     console.log("Printed Mail Options",mailOptions)
     try {
       console.log('OTP Email Sent');
-      await this.transporter.sendMail(mailOptions);
+      await this.transporter.sendMail(mailOptions,function(err) {
+        if(err)
+        {
+          console.log(err);
+        }
+        else
+        {
+          console.log('Message sent!');
+        }
+      });
     } catch (error) {
       console.error(error);
       console.error(error.message);

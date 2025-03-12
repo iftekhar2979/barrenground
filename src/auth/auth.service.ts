@@ -36,7 +36,7 @@ import { Profile } from 'src/profile/profile.schema';
 export class AuthService {
   constructor(
     @InjectModel(Otp.name) private otpModel: Model<Otp>,
-    @InjectModel(User.name) private userModel: Model<User>, 
+    @InjectModel(User.name) private userModel: Model<User>,
     private jwtService: JwtService, // Injecting the JwtService for token generation
     private emailService: EmailService,
   ) {}
@@ -51,7 +51,7 @@ export class AuthService {
   async checkUserExistWithPhone(createUserDto: CreateUserDto): Promise<User> {
     return await this.userModel.findOne({ phone: createUserDto.phone });
   }
-  
+
   async create(createUserDto: CreateUserDto): Promise<any> {
     const existingUser = await this.userModel.findOne({
       $or: [
@@ -60,11 +60,11 @@ export class AuthService {
         { phone: createUserDto.phone },
       ],
     });
-   
+
     if (existingUser) {
       if (existingUser.name === createUserDto.name) {
         console.log('User with this name already exists!=======');
-        
+
         throw new BadRequestException('User with this name already exists!');
       }
       if (existingUser.email === createUserDto.email) {
@@ -89,22 +89,21 @@ export class AuthService {
       expiredAt: currentDate,
     });
     // Send OTP email
-    this.emailService
-      .sendOtpEmail(newUser.email, otp, newUser.name)
-      .then(() => {
-        console.log(`OTP email sent to ${newUser.email} OTP ${otp}`);
-      })
-      .catch((error) => {
-        console.error('Error sending OTP email:', error);
-      });
-    console.timeEnd('Email Service');
+    await this.emailService.sendOtpEmail(newUser.email, otp, newUser.name);
+    // .then(() => {
+    //   console.log(`OTP email sent to ${newUser.email} OTP ${otp}`);
+    // })
+    // .catch((error) => {
+    //   console.error('Error sending OTP email:', error);
+    // });
+    // console.timeEnd('Email Service');
     // Prepare JWT payload
     const payload = {
       email: newUser.email,
       id: newUser._id,
       role: newUser.role,
       name: newUser.name,
-      profilePicture:newUser.profilePicture
+      profilePicture: newUser.profilePicture,
     };
     // Sign the JWT token
     const token = this.jwtService.sign(payload);
@@ -189,8 +188,8 @@ export class AuthService {
         token: token,
       });
     }
-    if(authDto.fcm){
-     await this.userModel.findByIdAndUpdate(user._id,{fcm:authDto.fcm})
+    if (authDto.fcm) {
+      await this.userModel.findByIdAndUpdate(user._id, { fcm: authDto.fcm });
     }
     const payload = {
       email: user.email,
@@ -198,19 +197,18 @@ export class AuthService {
       role: user.role,
       name: user.name,
       tokenFor: 'auth',
-      profilePicture:user.profilePicture,
-      fcm:authDto.fcm
+      profilePicture: user.profilePicture,
+      fcm: authDto.fcm,
     };
     const token = this.jwtService.sign(payload);
-  
+
     return { message: 'Logged In Successfully', data: user, token };
   }
   async verifyOtp(user: Omit<IUser, 'password'>, code: string) {
     let otpValue = await this.otpModel.findOne({ userID: user.id });
-    if(!otpValue){
+    if (!otpValue) {
       throw new BadRequestException({
-        message:
-          'OTP has been expired!',
+        message: 'OTP has been expired!',
         error: 'Bad Request',
       });
     }
@@ -222,10 +220,15 @@ export class AuthService {
       await otpValue.save();
       throw new NotFoundException('OTP not found!');
     }
-    const updatedUser = this.userModel.findByIdAndUpdate(user.id, { isEmailVerified: true }) as any;
+    const updatedUser = this.userModel.findByIdAndUpdate(user.id, {
+      isEmailVerified: true,
+    }) as any;
 
     // Delete OTP from the database after successful verification
-    const deleteOtpPromise = this.otpModel.deleteOne({ userID: user.id, oneTimePassword: code });
+    const deleteOtpPromise = this.otpModel.deleteOne({
+      userID: user.id,
+      oneTimePassword: code,
+    });
 
     // Wait for both operations to complete in parallel
     await Promise.all([updatedUser, deleteOtpPromise]);
@@ -241,21 +244,24 @@ export class AuthService {
         tokenFor: 'forget-password',
         // profilePicture:user.profilePicture
       };
-    }else{
+    } else {
       payload = {
         email: user.email,
         id: user.id,
         name: user.name,
         role: user.role,
-        tokenFor: 'email-verification'
+        tokenFor: 'email-verification',
       };
     }
-  
+
     const token = this.jwtService.sign(payload);
-    return { message: 'OTP Verified Successfully', data: {id:user.id}, token };
+    return {
+      message: 'OTP Verified Successfully',
+      data: { id: user.id },
+      token,
+    };
   }
   async resendOtp(user: Omit<IUser, 'password'>) {
-
     let otpData: otp = await this.otpModel.findOne({ userID: user.id });
     // If OTP data exists, check the time difference
     if (otpData && otpData.updatedAt) {
@@ -263,7 +269,7 @@ export class AuthService {
       // Check if the last OTP was sent less than 30 seconds ago
       if (timeDifference < 30000) {
         throw new BadRequestException(
-          `You can resend the OTP only after  ${Math.round((30-timeDifference/1000))} seconds.`,
+          `You can resend the OTP only after  ${Math.round(30 - timeDifference / 1000)} seconds.`,
         );
       }
     }
@@ -358,13 +364,13 @@ export class AuthService {
           console.log(res);
         })
         .catch((error) => {
-          console.log("email Send Errror")
+          console.log('email Send Errror');
         });
       // Save the new OTP in the database
       await saveOtp.save();
       let payload = {
         id: user.id,
-        email:user.email,
+        email: user.email,
         role: user.role,
         tokenFor: 'forget-password',
       };
