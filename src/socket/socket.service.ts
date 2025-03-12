@@ -62,7 +62,10 @@ export class SocketService {
       }
       const jwt = token.split(' ')[1];
       const payload = this.jwtService.verify(jwt);
-
+      if (!payload.name) {
+        console.warn("User Doesn't Has Valid Payload!")
+        return;
+      }
       this.connectedUsers.set(payload.id, {
         name: payload.name,
         socketID: clientId,
