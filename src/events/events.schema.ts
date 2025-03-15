@@ -25,9 +25,9 @@ export class Event extends Document {
   eventDescription: string;
   @Prop({ default: 0 })
   joined: number;
+  @Prop({ default: false })
+  isAcceptedByAdmin: boolean;
 }
-
-
 
 @Schema({ timestamps: true })
 export class EventInformation extends Document {
@@ -45,8 +45,6 @@ export class EventInformation extends Document {
   })
   eventId: mongoose.Schema.Types.ObjectId;
 }
-
-
 
 export const EventInfoSchema = SchemaFactory.createForClass(EventInformation);
 export const EventSchema = SchemaFactory.createForClass(Event);

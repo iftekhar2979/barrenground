@@ -19,7 +19,7 @@ export class JwtAuthGuard {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
 
-    console.log(token)
+    // console.log(token)
     if (!token) {
       throw new UnauthorizedException(
         'You are not authorized to access this resource!',
@@ -42,7 +42,7 @@ export class JwtAuthGuard {
       if (user.isDeleted) {
         throw new BadRequestException('User is Not Available!');
       }
-      console.log(user.name,token)
+      // console.log(user.name,token)
       request.user = payload; // Attach user data to the request
       console.timeEnd("JWT GUARD")
       return true;

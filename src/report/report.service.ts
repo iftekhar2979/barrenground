@@ -19,9 +19,12 @@ export class ReportService {
   }
   async getReports(limit: number, page: number): Promise<Report[]> {
     return await this.reportModel
-      .find()
+      .find({
+        userID: { $ne: null },
+      })
       .skip(limit * (page - 1))
       .limit(limit)
+      .sort({createdAt:-1})
       .populate({ path: 'userID', select: 'name email' })
       .populate({ path: 'reportedBy', select: 'name email' });
   }
@@ -55,7 +58,10 @@ export class ReportService {
     limit: number,
     page: number,
   ): Promise<ResponseInterface<Report[]>> {
-    const count = await this.getReportCount();
+    const count = await this.reportModel.countDocuments({
+      userID: { $ne: null },
+    });
+    console.log(count);
     const reports = await this.getReports(limit, page);
     return {
       message: 'Reports fetched successfully',
