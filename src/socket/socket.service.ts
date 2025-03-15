@@ -54,6 +54,7 @@ export class SocketService {
       const clientId = socket.id;
       const token = socket.handshake.headers.authorization;
       // console.log(socket.handshake.headers)
+      console.log("TOKEN",token)
       if (!token) {
         socket.emit('error', 'You are not authorized to access this resource!');
         throw new UnauthorizedException(
@@ -66,6 +67,7 @@ export class SocketService {
         console.warn("User Doesn't Has Valid Payload!")
         return;
       }
+      console.log("Connected",payload)
       this.connectedUsers.set(payload.id, {
         name: payload.name,
         socketID: clientId,

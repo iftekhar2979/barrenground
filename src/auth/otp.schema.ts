@@ -12,7 +12,7 @@ export class Otp extends Document {
   userID: mongoose.Schema.Types.ObjectId;
   @Prop({ required: true })
   oneTimePassword: string;
-  @Prop({ required: true })
+  @Prop({ required: true ,expires:"1m"})
   expiredAt: Date;
   @Prop({ default: 0 })
   attempts: number;

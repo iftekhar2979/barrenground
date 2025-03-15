@@ -68,9 +68,8 @@ export const multerConfig = {
     const allowedMimes = [
       'image/jpeg', 'image/png', 'image/gif','image/svg+xml',
       'audio/mpeg', 'audio/wav',
-      'video/mp4', 'video/webm', 'video/ogg'
+      'video/mp4', 'video/webm', 'video/ogg','image/webp'
     ];
-console.log(file)
     if (allowedMimes.includes(file.mimetype)) {
       callback(null, true);
     } else {

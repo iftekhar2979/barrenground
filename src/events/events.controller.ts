@@ -21,6 +21,7 @@ import { multerConfig } from 'src/common/multer/multer.config';
 import {
   PaginationDto,
   PaginationOptions,
+  SearchByNameWithPagination,
 } from 'src/common/dto/pagination.dto';
 
 @Controller('events')
@@ -37,34 +38,66 @@ export class EventController {
   @Post(':eventId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
-  async JoinToEvent(
-    @Request() req,
-    @Param('eventId') eventId,
-  ) {
+  async JoinToEvent(@Request() req, @Param('eventId') eventId) {
     const id = req.user.id;
     return this.eventService.joinEvent(eventId, id);
   }
-  @Patch(':eventId')
+  @Get('details/:eventId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
+  async getSingleEvent(
+    @Request() req,
+    @Param('eventId') eventId,
+    @Query() pagination: PaginationOptions,
+  ) {
+    return this.eventService.getSingleEvent({
+      eventId,
+      page: parseFloat(pagination.page),
+      limit: parseFloat(pagination.limit),
+    });
+  }
+  @Get('interest')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  async getInterested(
+    @Request() req,
+    @Query() pagination: PaginationOptions,
+  ) {
+    return this.eventService.getMyInterestedEvents({
+      userId: req.user.id,
+      page: parseFloat(pagination.page),
+      limit: parseFloat(pagination.limit),
+    });
+  }
+  @Patch(':eventId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user','admin')
   async updateEvent(
     @Request() req,
     @Param('eventId') eventId: string,
     @Body() eventData,
   ) {
+   if(req.user.role!=="admin"){
+     if(eventData.isAcceptedByAdmin){
+       throw new BadRequestException("You don't have the required role!")
+     }
+   }
     return this.eventService.updateEvent(eventId, eventData);
   }
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('user')
-  async getAllEvents(@Request() req, @Query() pagination: PaginationOptions) {
+  @Roles('user','admin')
+  async getAllEvents(@Request() req, @Query() pagination: SearchByNameWithPagination) {
     return this.eventService.findAllEvents({
-        userId:req.user.id,
+      userId: req.user.id,
+      status: pagination.status as 'accepted' | 'pending' | 'all',
+      name:pagination.term,
       page: parseFloat(pagination.page),
       limit: parseFloat(pagination.limit),
     });
   }
+
   @Get('/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
@@ -79,9 +112,9 @@ export class EventController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
   async deleteEvent(@Param('eventId') eventId: string) {
-    console.log(eventId)
-    if(!eventId){
-        throw new BadRequestException("Please Give the Event")
+    console.log(eventId);
+    if (!eventId) {
+      throw new BadRequestException('Please Give the Event');
     }
     return this.eventService.delete(eventId);
   }

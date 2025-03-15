@@ -53,6 +53,7 @@ export class UserService {
     const data = await this.userModel
       .find({
         name: { $regex: new RegExp(query.term, 'i') },
+        role:"user"
       })
       .select('-password')
       .skip(skip)

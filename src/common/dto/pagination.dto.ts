@@ -21,8 +21,12 @@ export class PaginationOptions {
   }
 
   export class SearchByNameWithPagination extends PaginationOptions {
-    @IsString()
-    term: string;
+    @IsOptional()
+    term?: string;
+    @IsOptional()
+    status?: string;
+    @IsOptional()
+    sortby?: 'accepted' | 'pending' | 'all';
   }
   export class searchTermAndWithinFilter extends PaginationOptions {
     @IsString()
