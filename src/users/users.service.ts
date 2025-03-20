@@ -25,6 +25,9 @@ export class UserService {
     const newUser = new this.userModel(createUserDto);
     return newUser.save();
   }
+  async createProfile(data) {
+    await this.profileModel.create(data);
+  }
   async updateProfilePicture(id: string, url: string): Promise<User> {
     return this.userModel.findByIdAndUpdate(
       id,
@@ -53,7 +56,7 @@ export class UserService {
     const data = await this.userModel
       .find({
         name: { $regex: new RegExp(query.term, 'i') },
-        role:"user"
+        role: 'user',
       })
       .select('-password')
       .skip(skip)
@@ -67,7 +70,7 @@ export class UserService {
     return { data, pagination: pagination(limit, page, total) };
   }
 
-  async findMyInfo(id: string): Promise<User> {
+  async findMyInfo(id: string): Promise<any> {
     let userInfo = await this.userModel.aggregate([
       {
         $match: {
@@ -83,7 +86,10 @@ export class UserService {
         },
       },
       {
-        $unwind: '$profile',
+        $unwind: {
+          path: '$profile',
+          preserveNullAndEmptyArrays: false,
+        },
       },
       {
         $addFields: {
@@ -103,7 +109,7 @@ export class UserService {
         },
       },
     ]);
-    return userInfo[0];
+    return { data: userInfo[0] };
   }
 
   // Find a user by ID
@@ -148,7 +154,7 @@ export class UserService {
   }
 
   // Update a user by ID
-  async update(id: string, updateUserDto: IUser): Promise<User> {
+  async update(id: string, updateUserDto): Promise<User> {
     return this.userModel
       .findByIdAndUpdate(id, updateUserDto, { new: true })
       .exec();
@@ -169,13 +175,13 @@ export class UserService {
   async updateMe(
     user,
     file: FileType,
-    name: string,
+    info: { name?: string; email?: string },
   ): Promise<ResponseInterface<{}>> {
     if (!file) {
       await Promise.all([
         this.profileModel.findOneAndUpdate(
           { userID: user.id },
-          { fullName: name },
+          { fullName: info.name },
           { new: true },
         ),
       ]);

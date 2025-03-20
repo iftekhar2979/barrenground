@@ -2,9 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model, mongo, ObjectId, Types } from 'mongoose';
 import { GroupMember } from './group-participant.schema'; // Adjust import paths as needed
-// import { group } from 'console';
-// import { Group } from 'src/conversation/conversation.schema';
-// import { GroupMember } from './'; // Adjust import paths as needed
 
 @Injectable()
 export class GroupService {
@@ -15,6 +12,9 @@ export class GroupService {
 
   // Method to add all users to a group as members
   addAllUsersToGroup(groupId: Types.ObjectId, userIds: Types.ObjectId[]) {
+    if(userIds.length===0){
+      return
+    }
     const groupMembers = userIds.map((userId) => ({
       groupId,
       userId,

@@ -67,7 +67,9 @@ export class ConversationService {
       type,
       createdBy: creatorId,
       admins: [creatorId],
+      isAccepted: false,
     });
+    console.log(users);
     await Promise.all([
       this.groupMemberModel.create({
         groupId: newGroup._id,
@@ -76,7 +78,7 @@ export class ConversationService {
       }),
       this.groupService.addAllUsersToGroup(
         new mongoose.Types.ObjectId(newGroup._id.toString()),
-        users.map((u) => new mongoose.Types.ObjectId(u)),
+        users ? users.map((u) => new mongoose.Types.ObjectId(u)) : [],
       ),
       this.notificationService.createNotification({
         userID: new mongoose.Types.ObjectId(creatorId) as unknown as ObjectId,
@@ -85,9 +87,11 @@ export class ConversationService {
         routingType: 'group',
       }),
       this.notificationService.batchUpdateNotificationsBulk(
-        users.map(
-          (u) => new mongoose.Types.ObjectId(u),
-        ) as unknown as ObjectId[],
+        users
+          ? (users.map(
+              (u) => new mongoose.Types.ObjectId(u),
+            ) as unknown as ObjectId[])
+          : [],
         {
           message: `You are Added To ${name} group by ${user.name} `,
           routingType: 'group',
@@ -348,10 +352,10 @@ export class ConversationService {
       },
     ];
     this.bulkCreateMessages(bulkMessage);
-   
+
     //  console.log( this.socketService
     // .getSocketByUserId(removedBy));
-  
+
     // this.socketService
     //   .getSocketByUserId(removedBy)
     //   .to(groupId)
@@ -408,7 +412,7 @@ export class ConversationService {
       throw new ForbiddenException('User is already in the group');
     }
 
-    const userInfos = await this.userModel.findById(userId).select('name')
+    const userInfos = await this.userModel.findById(userId).select('name');
 
     let bulkMessage = [
       {
@@ -419,13 +423,13 @@ export class ConversationService {
         type: 'added',
       },
     ];
-  
+
     await this.groupMemberModel.create({
       groupId,
       userId,
       role: 'member',
     });
-   await this.notificationService.createNotification({
+    await this.notificationService.createNotification({
       userID: new mongoose.Types.ObjectId(userId) as unknown as ObjectId,
       message: `Joined ${group.name} successfully`,
       key: new Types.ObjectId(groupId) as unknown as ObjectId,
@@ -459,134 +463,144 @@ export class ConversationService {
     limit: number = 10,
     searchTerm?: string,
     query: { isUserInvolved: boolean } = { isUserInvolved: false },
+    isAccepted: { isAccepted?: boolean } = { isAccepted: false },
   ) {
-    const userObjectId = new mongoose.Types.ObjectId(userId);
-    const userGroupIds = await this.groupMemberModel
-      .find({ userId: userObjectId })
-      .select('groupId')
-      .lean();
-    const involvedGroupIds = userGroupIds.map((g) => g.groupId);
-    // console.log(involvedGroupIds);
-    const pipeline: any = [
-      {
-        $match: {
-          name: { $regex: new RegExp(searchTerm, 'i') },
-          isActive: true,
+    try {
+      console.log(isAccepted);
+      const userObjectId = new mongoose.Types.ObjectId(userId);
+      const userGroupIds = await this.groupMemberModel
+        .find({ userId: userObjectId })
+        .select('groupId')
+        .lean();
+      const involvedGroupIds = userGroupIds.map((g) => g.groupId);
+      const pipeline: any = [
+        {
+          $match: {
+            name: { $regex: new RegExp(searchTerm, 'i') },
+            isActive: true,
+            ...isAccepted,
+          },
         },
-      },
-      {
-        $addFields: {
-          isUserInvolved: {
-            $cond: {
-              if: { $in: ['$_id', involvedGroupIds] },
-              then: true,
-              else: false,
+        {
+          $addFields: {
+            isUserInvolved: {
+              $cond: {
+                if: { $in: ['$_id', involvedGroupIds] },
+                then: true,
+                else: false,
+              },
             },
           },
         },
-      },
-      {
-        $match: {
-          ...query,
+        {
+          $match: {
+            ...query,
+          },
         },
-      },
 
-      {
-        $skip: (page - 1) * limit,
-      },
-      {
-        $limit: limit,
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'createdBy',
-          foreignField: '_id',
-          as: 'createdBy',
+        {
+          $skip: (page - 1) * limit,
         },
-      },
-      {
-        $lookup: {
-          from: 'groupmembers',
-          localField: '_id',
-          foreignField: 'groupId',
-          as: 'members',
-          pipeline: [{ $count: 'totalMembers' }],
+        {
+          $limit: limit,
         },
-      },
-      {
-        $lookup: {
-          from: 'messages',
-          localField: 'lastMessage',
-          foreignField: '_id',
-          as: 'lastMessage',
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'createdBy',
+            foreignField: '_id',
+            as: 'createdBy',
+          },
         },
-      },
-      {
-        $addFields: {
-          lastMessage: { $arrayElemAt: ['$lastMessage', 0] },
-          totalMembers: { $arrayElemAt: ['$members', 0] },
+        {
+          $lookup: {
+            from: 'groupmembers',
+            localField: '_id',
+            foreignField: 'groupId',
+            as: 'members',
+            pipeline: [{ $count: 'totalMembers' }],
+          },
         },
-      },
-      {
-        $project: {
-          name: 1,
-          avatar: 1,
-          type: 1,
-          description: 1,
-          lastMessage: '$lastMessage.content',
-          lastActiveAt: '$lastMessage.createdAt',
-          totalMember: '$totalMembers.totalMembers',
-          updatedAt: 1,
-          createdAt: 1,
+        {
+          $lookup: {
+            from: 'messages',
+            localField: 'lastMessage',
+            foreignField: '_id',
+            as: 'lastMessage',
+          },
         },
-      },
-      {
-        $sort: { updatedAt: -1 },
-      },
-    ];
+        {
+          $addFields: {
+            lastMessage: { $arrayElemAt: ['$lastMessage', 0] },
+            totalMembers: { $arrayElemAt: ['$members', 0] },
+          },
+        },
+        {
+          $project: {
+            name: 1,
+            avatar: 1,
+            type: 1,
+            description: 1,
+            lastMessage: '$lastMessage.content',
+            lastActiveAt: '$lastMessage.createdAt',
+            totalMember: '$totalMembers.totalMembers',
+            updatedAt: 1,
+            createdAt: 1,
+          },
+        },
+        {
+          $sort: { updatedAt: -1 },
+        },
+      ];
 
-    const count_pipline = [
-      {
-        $match: {
-          name: { $regex: new RegExp(searchTerm, 'i') },
-          isActive: true,
+      const count_pipline = [
+        {
+          $match: {
+            name: { $regex: new RegExp(searchTerm, 'i') },
+            isActive: true,
+            ...isAccepted,
+          },
         },
-      },
-      {
-        $addFields: {
-          isUserInvolved: {
-            $cond: {
-              if: { $in: ['$_id', involvedGroupIds] },
-              then: true,
-              else: false,
+        {
+          $addFields: {
+            isUserInvolved: {
+              $cond: {
+                if: { $in: ['$_id', involvedGroupIds] },
+                then: true,
+                else: false,
+              },
             },
           },
         },
-      },
-      {
-        $match: {
-          ...query,
+        {
+          $match: {
+            ...query,
+          },
         },
-      },
-      {
-        $count: 'totalGroups',
-      },
-    ];
-    const [groups, totalGroups] = await Promise.all([
-      this.groupModel.aggregate(pipeline).exec(),
-      this.groupModel.aggregate(count_pipline), // Count total groups
-    ]);
-    // console.log(totalGroups)
-    if (totalGroups.length === 0) {
-      throw new HttpException('No Group Found!', 404);
+        {
+          $count: 'totalGroups',
+        },
+      ];
+      const [groups, totalGroups] = await Promise.all([
+        this.groupModel.aggregate(pipeline).exec(),
+        this.groupModel.aggregate(count_pipline), // Count total groups
+      ]);
+      console.log(totalGroups);
+      if (totalGroups.length === 0) {
+        return {
+          message: `No conversations found!`,
+          data: groups,
+          pagination: pagination(limit, page, 0),
+        };
+      }
+      return {
+        message: `${totalGroups[0].totalGroups} conversations found!`,
+        data: groups,
+        pagination: pagination(limit, page, totalGroups[0].totalGroups),
+      };
+    } catch (error) {
+      console.log(error);
     }
-
-    return {
-      message: `${totalGroups[0].totalGroups} conversations found!`,
-      data: groups,
-      pagination: pagination(limit, page, totalGroups[0].totalGroups),
-    };
   }
 
   async leaveGroup(
@@ -790,5 +804,12 @@ export class ConversationService {
       console.error('Error creating messages:', error);
       throw new Error('Failed to create messages');
     }
+  }
+  async verifyGroup(groupId: string) {
+    await this.groupModel.findOneAndUpdate(
+      { _id: new mongoose.Types.ObjectId(groupId) },
+      { isAccepted: true },
+    );
+    return { message: 'Group Accepted', data: {} };
   }
 }

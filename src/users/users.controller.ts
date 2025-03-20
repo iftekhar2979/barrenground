@@ -33,6 +33,13 @@ import { multerConfig } from 'src/common/multer/multer.config';
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @Get('/me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async findMe(@Request() req) {
+    return this.userService.findOne(req.user.id);
+  }
   @Post()
   async create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
@@ -41,7 +48,7 @@ export class UserController {
   @Get('/all')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  async findAll(@Query() query: { term:string,limit: string; page: string }) {
+  async findAll(@Query() query: { term: string; limit: string; page: string }) {
     try {
       return this.userService.findAll(query);
     } catch (error) {
@@ -54,6 +61,7 @@ export class UserController {
   async findOne(@Param('id') id: string) {
     return this.userService.findOne(id);
   }
+
   @Get('')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
@@ -91,7 +99,7 @@ export class UserController {
 
   @Post('profile-picture')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('user')
+  @Roles('user','admin')
   @UseInterceptors(FileInterceptor('file', multerConfig))
   imagesUpload(@Request() req, @UploadedFile() file: Express.Multer.File) {
     let user = req.user; // Assuming user info is in the request
@@ -99,6 +107,7 @@ export class UserController {
   }
   @Get('/info/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user', 'admin')
   async accountInfoMe(@Request() req: any) {
     try {
       let id = req.user.id;
@@ -110,14 +119,20 @@ export class UserController {
   @Patch('/info/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseInterceptors(FileInterceptor('file', multerConfig))
-  async updateAccountInformation(@Request() req,@UploadedFile() file: Express.Multer.File , @Body("name") name:string) {
-    try {
-      // if(!file){
-
-      // }
-      return this.userService.updateMe(req.user,file,name);
-    } catch (error) {
-      throw new NotFoundException('Information Not Found!');
-    }
+  async updateAccountInformation(
+    @Request() req,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() info: { name: string },
+  ) {
+    return this.userService.updateMe(req.user, file, info);
+  }
+  @Put('/info/me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async updateUser(
+    @Request() req,
+    @Body() info: { name: string; email: string; phone: string },
+  ) {
+    return this.userService.update(req.user.id, info);
   }
 }

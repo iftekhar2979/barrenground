@@ -11,6 +11,9 @@ import {
   Get,
   Query,
   BadRequestException,
+  HttpException,
+  UnauthorizedException,
+  Patch,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 // import { UploadService } from 'src/common/multer/upload.service';
@@ -42,7 +45,8 @@ export class ConversationController {
       page = '1';
     }
     return await this.groupService.getAllGroupsAndUsers({
-      year:parseFloat(year) || new Date().getFullYear()});
+      year: parseFloat(year) || new Date().getFullYear(),
+    });
   }
   @Get('/users')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -60,7 +64,6 @@ export class ConversationController {
       limit: parseFloat(limit),
     });
   }
-
   @Get('/friends')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
@@ -90,7 +93,7 @@ export class ConversationController {
     },
   ) {
     if (!req.user) {
-      throw new Error('No User Found');
+      throw new UnauthorizedException('No User Found');
     }
     let avatarUrl: string = '';
     if (!req.file) {
@@ -134,7 +137,7 @@ export class ConversationController {
         groupId,
         body.userId,
         req.user.id,
-        req.user.name
+        req.user.name,
       );
     } catch (error) {
       throw new BadRequestException(error.message);
@@ -147,14 +150,12 @@ export class ConversationController {
     if (!groupId) {
       throw new ForbiddenException('No Group found');
     }
-
     try {
       return await this.groupService.getGroupById(groupId, req.user.id);
     } catch (error) {
       throw new Error('Error adding user to group: ' + error.message);
     }
   }
-
   @Get('/group/:groupId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
@@ -181,7 +182,6 @@ export class ConversationController {
       throw new Error('Error adding user to group: ' + error.message);
     }
   }
-
   @Get('')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user', 'admin')
@@ -191,6 +191,7 @@ export class ConversationController {
     @Query('limit') limit: number = 10,
     @Query('searchTerm') search: string,
     @Query('involved') involved: 'yes' | 'no',
+    @Query('accepted') accepted: 'true' | 'false',
   ) {
     page = Math.max(Number(page), 1);
     limit = Math.max(Number(limit), 1);
@@ -205,22 +206,31 @@ export class ConversationController {
     if (!req.user) {
       throw new ForbiddenException('No user found');
     }
-    let query: { isUserInvolved: boolean } = { isUserInvolved: false };
+    let query: { isUserInvolved: boolean } = {
+      isUserInvolved: false,
+    };
     if (involved === 'yes') {
       query = { isUserInvolved: true };
     }
-    try {
-      return await this.groupService.getAllConversations(
-        req.user.id,
-        page,
-        limit,
-        search,
-        query,
-      );
-    } catch (error) {
-      throw new Error('Error adding user to group: ' + error.message);
+    let acceptQuery: { isAccepted?: boolean } = { isAccepted: false };
+    // if(!accepted){
+    //   acceptQuery={}
+    // }
+    if (accepted === 'true') {
+      acceptQuery.isAccepted = true;
+    } else {
+      acceptQuery.isAccepted = false;
     }
+    return await this.groupService.getAllConversations(
+      req.user.id,
+      page,
+      limit,
+      search,
+      query,
+      acceptQuery,
+    );
   }
+
   @Post('/group/:groupId/remove/:userId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
@@ -237,7 +247,7 @@ export class ConversationController {
       groupId,
       userId,
       removedBy,
-      req.user.name
+      req.user.name,
     );
   }
 
@@ -261,13 +271,14 @@ export class ConversationController {
   @Post('/group/:groupId/leave')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
-  leaveGroup(
-    @Request() req,
-    @Param('groupId') groupId: string,
-    // @Param('userId') userId: string,
-  ) {
-    // const
+  leaveGroup(@Request() req, @Param('groupId') groupId: string) {
     return this.groupService.leaveGroup(groupId, req.user.id);
   }
-  
+
+  @Patch('/group/verify/:groupId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  acceptGroup(@Request() req, @Param('groupId') groupId: string) {
+    return this.groupService.verifyGroup(groupId);
+  }
 }

@@ -21,7 +21,7 @@ export class SeederService {
   async seedAdminUser() {
     const adminEmail = 'admin.lira@qping.com'; // Use a valid email
     const existingAdmin = await this.userService.findByEmail(adminEmail);
-console.log(existingAdmin)
+// console.log(existingAdmin)
     // let date = new Date();
     if (!existingAdmin) {
         const adminDto = {
@@ -33,9 +33,12 @@ console.log(existingAdmin)
           phone:"+8801837352978",
           isEmailVerified:true
         };
+    
         await this.userService.create(adminDto)
-      // await this.userService.create(adminDto); // Assuming create method is in your UserService
-      console.log('Admin user created successfully!');
+
+        
+      // await this.userService.create(adminDto); 
+      console.log('Admin created successfully!');
     } else {
       console.log('Admin user already exists.');
     }

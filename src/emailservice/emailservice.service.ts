@@ -13,8 +13,8 @@ export class EmailService {
       secure: true,             
       service: 'gmail', 
       auth: {
-        user: 'salminrashid556@gmail.com',  // Your Gmail address
-        pass: 'qpwe buzr dppt cibl',        // Your app-specific password (if 2FA enabled)
+        user: 'no-reply@qping.app',  // Your Gmail address
+        pass: 'yhzj soca yavh dzqs',        // Your app-specific password (if 2FA enabled)
       },
       connectionTimeout: 30000,  // Increased connection timeout
       tls: {

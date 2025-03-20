@@ -10,6 +10,8 @@ export class Group extends Document {
   avatar : string
   @Prop({ enum: ['public', 'private'], required: true })
   type: string; 
+  @Prop({ default: false })
+  isAccepted: boolean; 
   @Prop({ required: false })
   description: string; 
 
