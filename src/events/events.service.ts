@@ -256,6 +256,7 @@ export class EventService {
         eventId: new mongoose.Types.ObjectId(eventId),
       }),
     ]);
+    // console.log(count)
     if (!count) {
       throw new HttpException('No users are interested', 404);
     }
@@ -305,9 +306,12 @@ export class EventService {
       },
       {
         $project: {
+          eventId:1,
           eventName: '$event.eventName',
           eventDate: '$event.eventDate',
           eventTime: '$event.eventTime',
+          eventLocation: '$event.eventLocation',
+          eventDescription: '$event.eventDescription',
           joined: '$event.joined',
           createdAt: '$event.createdAt',
           updatedAt: '$event.updatedAt',
