@@ -19,7 +19,7 @@ export class SeederService {
   ) {}
 
   async seedAdminUser() {
-    const adminEmail = 'admin.lira@qping.com'; // Use a valid email
+    const adminEmail = 'no-reply@qping.app'; // Use a valid email
     const existingAdmin = await this.userService.findByEmail(adminEmail);
 // console.log(existingAdmin)
     // let date = new Date();
@@ -30,7 +30,7 @@ export class SeederService {
           role: 'admin', // Adjust if you have roles set up
           name: 'Lira',
           profilePicture: 'uploads/girl.png',
-          phone:"+8801837352978",
+          phone:"+9145454544",
           isEmailVerified:true
         };
     
