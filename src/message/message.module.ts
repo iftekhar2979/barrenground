@@ -16,13 +16,18 @@ import { ChatModule } from 'src/chat/chat.module';
 import { Group, GroupSchema } from 'src/conversation/conversation.schema';
 import { Conversation, ConversationSchema } from 'src/chat/chat.schema';
 import { Reaction, ReactionSchema } from './schema/reaction.schema';
+import { ConfigModule ,ConfigService} from '@nestjs/config';
 
 @Module({
   imports: [
-    JwtModule.register({
-      secret: 'yourSecretKey',
-      signOptions: { expiresIn: '30d' },
-    }),
+     JwtModule.registerAsync({
+         imports: [ConfigModule],
+         useFactory: async (configService: ConfigService) => ({
+           secret: configService.get<string>('JWT_SECRET'),
+           signOptions: { expiresIn: '30d' },
+         }),
+         inject: [ConfigService],
+       }),
     UsersModule,
     MongooseModule.forFeature([
       { name: Message.name, schema: MessageSchema },
