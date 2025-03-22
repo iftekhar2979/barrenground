@@ -10,6 +10,7 @@ import { UsersModule } from 'src/users/users.module';
 
 import { User, UserSchema } from 'src/users/users.schema';
 import { ProfileController } from './profile.controller';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -17,9 +18,13 @@ import { ProfileController } from './profile.controller';
       { name: Profile.name, schema: ProfileSchema },
       { name: User.name, schema: UserSchema },
     ]),
-    JwtModule.register({
-      secret: 'yourSecretKey', // You should move this to a config file or env variables
-      signOptions: { expiresIn: '30d' }, // Token expiration time
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '30d' },
+      }),
+      inject: [ConfigService],
     }),
     UsersModule,
   ],

@@ -15,3 +15,4 @@ import { Settings, SettingsSchema } from './settings.schema';
   exports:[SettingsService,]
 })
 export class SettingsModule {}
+

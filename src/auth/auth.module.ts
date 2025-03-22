@@ -12,6 +12,7 @@ import { Otp, OtpSchema } from './otp.schema';
 import { EmailserviceModule } from 'src/emailservice/emailservice.module';
 import { Reflector } from '@nestjs/core';
 import { Profile, ProfileSchema } from 'src/profile/profile.schema';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 
 @Module({
@@ -20,9 +21,13 @@ import { Profile, ProfileSchema } from 'src/profile/profile.schema';
     MongooseModule.forFeature([{ name: Otp.name, schema: OtpSchema }]),
     MongooseModule.forFeature([{ name: Profile.name, schema: ProfileSchema }]),
 
-    JwtModule.register({
-      secret: 'yourSecretKey', // You should move this to a config file or env variables
-      signOptions: { expiresIn: '30d' }, // Token expiration time
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '30d' },
+      }),
+      inject: [ConfigService],
     }),
     UsersModule,
     EmailserviceModule,

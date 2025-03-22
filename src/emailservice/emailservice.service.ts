@@ -6,19 +6,19 @@ import { ConfigService } from '@nestjs/config'; // If you are using environment 
 export class EmailService {
   private transporter: nodemailer.Transporter;
 
-  constructor() {
+  constructor(private configService: ConfigService) {
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',   
-      port: 465,                
-      secure: true,             
-      service: 'gmail', 
+      host: this.configService.get<string>('SMTP_HOST'),
+      port: this.configService.get<string>('SMTP_PORT'),
+      secure: true,
+      service: 'gmail',
       auth: {
-        user: 'no-reply@qping.app',  // Your Gmail address
-        pass: 'yhzj soca yavh dzqs',        // Your app-specific password (if 2FA enabled)
+        user: this.configService.get<string>('SMTP_USERNAME'), // Your Gmail address
+        pass: this.configService.get<string>('SMTP_PASSWORD'), // Your app-specific password (if 2FA enabled)
       },
-      connectionTimeout: 30000,  // Increased connection timeout
+      connectionTimeout: 30000, // Increased connection timeout
       tls: {
-        rejectUnauthorized: false,  // This allows self-signed certificates (if necessary)
+        rejectUnauthorized: false, // This allows self-signed certificates (if necessary)
       },
     });
   }
@@ -28,23 +28,20 @@ export class EmailService {
     console.log('email', to);
     // console.log('From', process.env.SMTP_USERNAME);
     const htmlTemplate = this.getOtpHtmlTemplate(userName, otp);
-// console.log(process.env.SMTP)
+    // console.log(process.env.SMTP)
     const mailOptions = {
-      from: "info@medroofurgentcare.com",
+      from: this.configService.get<string>('SMTP_USERNAME'),
       to,
       subject: 'Q-ping OTP for Registration',
       html: htmlTemplate,
     };
-    console.log("Printed Mail Options",mailOptions)
+    console.log('Printed Mail Options', mailOptions);
     try {
       console.log('OTP Email Sent');
-      await this.transporter.sendMail(mailOptions,function(err) {
-        if(err)
-        {
+      await this.transporter.sendMail(mailOptions, function (err) {
+        if (err) {
           console.log(err);
-        }
-        else
-        {
+        } else {
           console.log('Message sent!');
         }
       });
@@ -129,7 +126,7 @@ export class EmailService {
   //             <div class="email-header">
   //                 <h1>Vibely OTP Verification</h1>
   //             </div>
-  
+
   //             <div class="email-body">
   //                 <p>Dear <strong>${userName}</strong>,</p>
   //                 <p>Thank you for registering on Vibely! To complete your registration, please verify your email address by entering the One-Time Password (OTP) below:</p>
@@ -139,7 +136,7 @@ export class EmailService {
   //                 <p>The OTP is valid for the next 10 minutes. If you didn't request this OTP, please ignore this email.</p>
   //                 <p>If you have any questions or need help, feel free to contact us at <a href="mailto:support@vibelyapp.com">support@vibelyapp.com</a>.</p>
   //             </div>
-  
+
   //             <div class="email-footer">
   //                 <p>The <strong>Vibely Team</strong></p>
   //                 <p><a href="https://vibelyapp.com" target="_blank">Visit Vibely</a> | <a href="https://vibelyapp.com/privacy-policy" target="_blank">Privacy Policy</a> | <a href="https://vibelyapp.com/terms" target="_blank">Terms of Service</a></p>

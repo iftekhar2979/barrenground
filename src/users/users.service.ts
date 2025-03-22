@@ -162,7 +162,8 @@ export class UserService {
 
   // Delete a user by ID
   async delete(id: string): Promise<any> {
-    return this.userModel.findByIdAndDelete(id).exec();
+    await this.userModel.findByIdAndUpdate(id, { isDeleted: true }).exec();
+    return { message: 'Account deleted successfully', data: {} };
   }
   async uploadProfilePicture(user: User, file: FileType): Promise<any> {
     await this.updateProfilePicture(

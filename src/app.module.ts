@@ -24,10 +24,20 @@ import { FirebaseModule } from './firebase/firebase.module';
 import { FirebaseController } from './firebase/firebase.controller';
 import { FirebaseService } from './firebase/firebase.service';
 import { CronModule } from './cron/cron.module';
+import { ConfigModule,ConfigService } from '@nestjs/config';
 
 @Module({
   imports:  [
-    MongooseModule.forRoot('mongodb+srv://theliraliu:31b91LZTzSpTY0Sa@cluster0.pkkeu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'),
+    ConfigModule.forRoot({
+      isGlobal: true, // Makes the configuration available globally
+    }),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],  
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGO_URI'), 
+      }),
+      inject: [ConfigService],  
+    }),
     UsersModule,
     AuthModule,
     ServeStaticModule.forRoot({
