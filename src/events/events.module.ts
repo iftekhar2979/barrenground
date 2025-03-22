@@ -7,6 +7,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Event, EventInformation, EventInfoSchema, EventSchema } from './events.schema';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports :[
     MongooseModule.forFeature([
@@ -15,9 +16,13 @@ import { UsersModule } from 'src/users/users.module';
             name:EventInformation.name, schema:EventInfoSchema
           }
         ]),
-        JwtModule.register({
-          secret: 'yourSecretKey', // You should move this to a config file or env variables
-          signOptions: { expiresIn: '30d' }, // Token expiration time
+        JwtModule.registerAsync({
+          imports: [ConfigModule],
+          useFactory: async (configService: ConfigService) => ({
+            secret: configService.get<string>('JWT_SECRET'),
+            signOptions: { expiresIn: '30d' },
+          }),
+          inject: [ConfigService],
         }),
         UsersModule,
   ],

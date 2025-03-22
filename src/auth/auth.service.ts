@@ -220,7 +220,7 @@ export class AuthService {
     if (otpValue.oneTimePassword !== code) {
       otpValue.attempts++;
       await otpValue.save();
-      throw new NotFoundException('OTP not found!');
+      throw new BadRequestException('OTP not matched!');
     }
     const updatedUser = this.userModel.findByIdAndUpdate(user.id, { isEmailVerified: true }) as any;
 

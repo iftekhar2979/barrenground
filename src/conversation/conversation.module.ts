@@ -18,6 +18,7 @@ import { User, UserSchema } from 'src/users/users.schema';
 import { MessageModule } from 'src/message/message.module';
 import { Message, MessageSchema } from 'src/message/message.schema';
 import { SocketModule } from 'src/socket/socket.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -34,9 +35,13 @@ import { SocketModule } from 'src/socket/socket.module';
         name:Message.name,schema:MessageSchema
       }
     ]),
-    JwtModule.register({
-      secret: 'yourSecretKey', // You should move this to a config file or env variables
-      signOptions: { expiresIn: '30d' }, // Token expiration time
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '30d' },
+      }),
+      inject: [ConfigService],
     }),
     UsersModule,
     GroupParticipantModule,

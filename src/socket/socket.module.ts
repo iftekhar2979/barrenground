@@ -19,6 +19,7 @@ import {
 import { MessageService } from './socket.seen.service';
 import { MessageSeen, MessageSeenSchema } from 'src/message/schema/seen.schema';
 import { Reaction, ReactionSchema } from 'src/message/schema/reaction.schema';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 // import { SocketGateway } from './socket.gateway';
 @Module({
   imports: [
@@ -37,9 +38,13 @@ import { Reaction, ReactionSchema } from 'src/message/schema/reaction.schema';
         name:Reaction.name,schema:ReactionSchema
       },
     ]),
-    JwtModule.register({
-      secret: 'yourSecretKey',
-      signOptions: { expiresIn: '30d' },
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '30d' },
+      }),
+      inject: [ConfigService],
     }),
     UsersModule,
   ],
