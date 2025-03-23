@@ -11,6 +11,7 @@ import {
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { SocketModule } from 'src/socket/socket.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -24,10 +25,14 @@ import { SocketModule } from 'src/socket/socket.module';
         schema: DetailedNotificationSchema,
       },
     ]),
-    JwtModule.register({
-      secret: 'yourSecretKey',
-      signOptions: { expiresIn: '30d' },
-    }),
+     JwtModule.registerAsync({
+        imports: [ConfigModule],
+        useFactory: async (configService: ConfigService) => ({
+          secret: configService.get<string>('JWT_SECRET'),
+          signOptions: { expiresIn: '30d' },
+        }),
+        inject: [ConfigService],
+      }),
     UsersModule,
     // SocketModule
   ],
