@@ -101,6 +101,7 @@ export class ConversationController {
     } else {
       avatarUrl = `uploads/${req.file.filename}`;
     }
+   
     if (typeof body.users === 'string') {
       body.users = body.users.split(',');
     }

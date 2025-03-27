@@ -28,7 +28,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       },
       inject: [ConfigService],
     }),
-    Reflector, // Register Reflector for metadata reflection
+    Reflector,
   ],
   controllers: [UserController],
   providers: [UserService],
