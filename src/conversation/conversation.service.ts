@@ -84,8 +84,11 @@ export class ConversationService {
         routingType: 'group',
       }),
     ]);
-    console.log("users",users);
+    console.log("users",users ,users.length);
     if (users) {
+      if(users.length === 0){
+        return { message: 'Group Created Successfully', data: newGroup };
+      }
       if (users.length > 0) {
         await Promise.all([
           await this.groupService.addAllUsersToGroup(
