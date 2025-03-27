@@ -85,25 +85,29 @@ export class ConversationService {
       }),
      
     ]);
-
-    if(users.length>0){
-      await Promise.all([    await this.groupService.addAllUsersToGroup(
-        new mongoose.Types.ObjectId(newGroup._id.toString()),
-        users ? users.map((u) => new mongoose.Types.ObjectId(u)) : [],
-      ),
-      this.notificationService.batchUpdateNotificationsBulk(
-        users
-          ? (users.map(
-              (u) => new mongoose.Types.ObjectId(u),
-            ) as unknown as ObjectId[])
-          : [],
-        {
-          message: `You are added to ${name} group by ${user.name} `,
-          routingType: 'group',
-          key: newGroup._id as unknown as ObjectId,
-        },
-      ) ]);
-    }
+console.log(users)
+if(users){
+  if(users.length>0 ){
+    await Promise.all([    
+      await this.groupService.addAllUsersToGroup(
+      new mongoose.Types.ObjectId(newGroup._id.toString()),
+      users ? users.map((u) => new mongoose.Types.ObjectId(u)) : [],
+    ),
+    this.notificationService.batchUpdateNotificationsBulk(
+      users
+        ? (users.map(
+            (u) => new mongoose.Types.ObjectId(u),
+          ) as unknown as ObjectId[])
+        : [],
+      {
+        message: `You are added to ${name} group by ${user.name} `,
+        routingType: 'group',
+        key: newGroup._id as unknown as ObjectId,
+      },
+    ) ]);
+  }
+}
+    
 
       console.timeEnd('GROUP CREATION');
     return { message: 'Group Created Successfully', data: newGroup };
