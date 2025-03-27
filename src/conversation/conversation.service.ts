@@ -69,17 +69,14 @@ export class ConversationService {
       admins: [creatorId],
       isAccepted: false,
     });
-    console.log(users);
+
     await Promise.all([
       this.groupMemberModel.create({
         groupId: newGroup._id,
         userId: creatorId,
         role: 'admin',
       }),
-      this.groupService.addAllUsersToGroup(
-        new mongoose.Types.ObjectId(newGroup._id.toString()),
-        users ? users.map((u) => new mongoose.Types.ObjectId(u)) : [],
-      ),
+
       this.notificationService.createNotification({
         userID: new mongoose.Types.ObjectId(creatorId) as unknown as ObjectId,
         message: `${name} Group Is Created Successfully `,
@@ -93,14 +90,21 @@ export class ConversationService {
             ) as unknown as ObjectId[])
           : [],
         {
-          message: `You are Added To ${name} group by ${user.name} `,
+          message: `You are added to ${name} group by ${user.name} `,
           routingType: 'group',
           key: newGroup._id as unknown as ObjectId,
         },
       ),
     ]);
 
-    console.timeEnd('GROUP CREATION');
+    if(users.length>0){
+      await this.groupService.addAllUsersToGroup(
+        new mongoose.Types.ObjectId(newGroup._id.toString()),
+        users ? users.map((u) => new mongoose.Types.ObjectId(u)) : [],
+      )
+    }
+
+      console.timeEnd('GROUP CREATION');
     return { message: 'Group Created Successfully', data: newGroup };
   }
 
