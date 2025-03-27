@@ -83,6 +83,14 @@ export class ConversationService {
         key: newGroup._id as ObjectId,
         routingType: 'group',
       }),
+     
+    ]);
+
+    if(users.length>0){
+      await Promise.all([    await this.groupService.addAllUsersToGroup(
+        new mongoose.Types.ObjectId(newGroup._id.toString()),
+        users ? users.map((u) => new mongoose.Types.ObjectId(u)) : [],
+      ),
       this.notificationService.batchUpdateNotificationsBulk(
         users
           ? (users.map(
@@ -94,14 +102,7 @@ export class ConversationService {
           routingType: 'group',
           key: newGroup._id as unknown as ObjectId,
         },
-      ),
-    ]);
-
-    if(users.length>0){
-      await this.groupService.addAllUsersToGroup(
-        new mongoose.Types.ObjectId(newGroup._id.toString()),
-        users ? users.map((u) => new mongoose.Types.ObjectId(u)) : [],
-      )
+      ) ]);
     }
 
       console.timeEnd('GROUP CREATION');
