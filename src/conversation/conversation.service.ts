@@ -85,7 +85,6 @@ export class ConversationService {
       }),
      
     ]);
-console.log(users)
 if(users){
   if(users.length>0 ){
     await Promise.all([    
