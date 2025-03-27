@@ -86,7 +86,7 @@ export class ConversationService {
     ]);
     console.log("users",users ,users.length);
     if (users) {
-      if(users.length === 0){
+      if(users[0]==='' && users.length===1){
         return { message: 'Group Created Successfully', data: newGroup };
       }
       if (users.length > 0) {
