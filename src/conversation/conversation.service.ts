@@ -477,7 +477,6 @@ export class ConversationService {
     isAccepted: { isAccepted?: boolean } = { isAccepted: false },
   ) {
     try {
-      console.log(isAccepted);
       const userObjectId = new mongoose.Types.ObjectId(userId);
       const userGroupIds = await this.groupMemberModel
         .find({ userId: userObjectId })
@@ -596,7 +595,6 @@ export class ConversationService {
         this.groupModel.aggregate(pipeline).exec(),
         this.groupModel.aggregate(count_pipline), // Count total groups
       ]);
-      console.log(totalGroups);
       if (totalGroups.length === 0) {
         return {
           message: `No conversations found!`,
@@ -822,5 +820,12 @@ export class ConversationService {
       { isAccepted: true },
     );
     return { message: 'Group Accepted', data: {} };
+  }
+  async deleteGroup(groupId: string) {
+    await this.groupModel.findOneAndDelete(
+      { _id: new mongoose.Types.ObjectId(groupId) },
+      { isAccepted: true },
+    );
+    return { message: 'Group Deleted Successfully', data: {} };
   }
 }

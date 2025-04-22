@@ -20,7 +20,7 @@ export class CronService {
 
   scheduleEventNotifications() {
     console.log('Cron Job Scheduled');
-    cron.schedule('0 * * * *', async () => {
+    cron.schedule('0 0 * * *', async () => {
       // Runs every hour
       this.logger.log(
         '🔍 Checking for events happening in the next 24 hours...',

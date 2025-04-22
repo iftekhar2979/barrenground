@@ -14,6 +14,7 @@ import {
   HttpException,
   UnauthorizedException,
   Patch,
+  Delete,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 // import { UploadService } from 'src/common/multer/upload.service';
@@ -95,13 +96,23 @@ export class ConversationController {
     if (!req.user) {
       throw new UnauthorizedException('No User Found');
     }
+    if (body.name.length < 40 || body.name.length >= 3) {
+      throw new BadRequestException(
+        'Group Name Must be between 3 to 40 characters',
+      );
+    }
+    if (body.description.length < 100 || body.description.length > 3) {
+      throw new BadRequestException(
+        'Group Name Must be between 3 to 100 characters',
+      );
+    }
     let avatarUrl: string = '';
     if (!req.file) {
       avatarUrl = `uploads/group.jpg`;
     } else {
       avatarUrl = `uploads/${req.file.filename}`;
     }
-   
+
     if (typeof body.users === 'string') {
       body.users = body.users.split(',');
     }
@@ -281,5 +292,14 @@ export class ConversationController {
   @Roles('admin')
   acceptGroup(@Request() req, @Param('groupId') groupId: string) {
     return this.groupService.verifyGroup(groupId);
+  }
+  @Delete('/group/:groupId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  deleteGroup(@Request() req, @Param('groupId') groupId: string) {
+    if (!groupId) {
+      throw new BadRequestException('Group ID is required');
+    }
+    return this.groupService.deleteGroup(groupId);
   }
 }
