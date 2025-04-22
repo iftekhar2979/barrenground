@@ -182,7 +182,6 @@ export class EventService {
     return this.eventModel.findById(eventId).exec();
   }
   async delete(eventId: string) {
-    console.log(eventId);
     await this.eventModel.deleteOne({
       _id: new mongoose.Types.ObjectId(eventId),
     });

@@ -59,6 +59,7 @@ export class UserService {
         role: 'user',
       })
       .select('-password')
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();

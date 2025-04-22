@@ -33,6 +33,15 @@ export class EventController {
   @Roles('user')
   async createEvent(@Request() req, @Body() eventData) {
     const id = req.user.id;
+    if(eventData.eventName.length<3 || eventData.eventName.length>50){
+      throw new BadRequestException("Event name should between 3 to 50 characters long")
+    }
+    if(eventData.eventDescription.length<3 || eventData.eventDescription.length>200){
+      throw new BadRequestException("Event Description should between 3 to 200 characters long")
+    }
+    if(eventData.location.length<3 || eventData.location.length>200){
+      throw new BadRequestException("Event Location should between 3 to 200 characters long")
+    }
     return this.eventService.createEvent(id, eventData);
   }
   @Post(':eventId')
@@ -110,12 +119,13 @@ export class EventController {
 
   @Delete(':eventId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('user')
+  @Roles('user','admin')
   async deleteEvent(@Param('eventId') eventId: string) {
-    console.log(eventId);
     if (!eventId) {
       throw new BadRequestException('Please Give the Event');
     }
     return this.eventService.delete(eventId);
   }
+
+
 }
