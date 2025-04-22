@@ -430,7 +430,7 @@ export class ConversationService {
         groupId: new Types.ObjectId(groupId) as unknown as ObjectId,
         conversationId: null,
         sender: new Types.ObjectId(userId) as unknown as ObjectId,
-        content: `${userInfos.name} joined to the group`,
+        content: `${userInfos.name} joined the group`,
         type: 'added',
       },
     ];
