@@ -2,7 +2,6 @@
 /dist
 /node_modules
 /build
-/public
 
 # Logs
 logs
@@ -30,18 +29,11 @@ lerna-debug.log*
 *.sublime-workspace
 
 # IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
 
 # dotenv environment variable files
-.env
 .env.development.local
 .env.test.local
 .env.production.local
-.env.local
 
 # temp directory
 .temp
@@ -59,5 +51,9 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Ignore Firebase config & environment variables
 # Ignore Firebase credentials
 src/firebase/firebase.config.json
-.env
 
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
+config.bat
