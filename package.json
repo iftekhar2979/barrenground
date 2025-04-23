@@ -6,10 +6,10 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "node init && nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start --watch --port 8080",
-    "dev": "nodemon --watch src --ext ts,js,json --exec ts-node -r tsconfig-paths/register src/main.ts",
+    "start": "node init && nest start --watch --port 8080",
+    "dev": "node init && nodemon --watch src --ext ts,js,json --exec ts-node -r tsconfig-paths/register src/main.ts",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
