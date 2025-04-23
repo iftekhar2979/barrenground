@@ -84,9 +84,9 @@ export class ConversationService {
         routingType: 'group',
       }),
     ]);
-    console.log("users",users ,users.length);
+    console.log('users', users, users.length);
     if (users) {
-      if(users[0]==='' && users.length===1){
+      if (users[0] === '' && users.length === 1) {
         return { message: 'Group Created Successfully', data: newGroup };
       }
       if (users.length > 0) {
@@ -822,10 +822,8 @@ export class ConversationService {
     return { message: 'Group Accepted', data: {} };
   }
   async deleteGroup(groupId: string) {
-    await this.groupModel.findOneAndDelete(
-      { _id: new mongoose.Types.ObjectId(groupId) },
-      { isAccepted: true },
-    );
+    let group = await this.groupModel.findByIdAndDelete(groupId);
+    if (!group) throw new BadRequestException('Group not found');
     return { message: 'Group Deleted Successfully', data: {} };
   }
 }
